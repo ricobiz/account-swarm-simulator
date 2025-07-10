@@ -5,78 +5,123 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Эмуляция Multilogin API для тестирования
-class MultiloginAPIEmulator {
+// Реальная интеграция с Multilogin API
+class MultiloginAPIClient {
+  private baseUrl: string
   private token: string
-  private profiles: Map<string, any> = new Map()
 
-  constructor(token: string) {
+  constructor(baseUrl: string, token: string) {
+    this.baseUrl = baseUrl
     this.token = token
   }
 
-  async checkConnection(): Promise<boolean> {
-    // Эмуляция проверки соединения
-    await new Promise(resolve => setTimeout(resolve, 500))
-    return true
-  }
-
-  async createProfile(accountData: any): Promise<string> {
-    const profileId = `profile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  async makeRequest(endpoint: string, method: string = 'GET', body?: any) {
+    const url = `${this.baseUrl}${endpoint}`
     
-    const profile = {
-      id: profileId,
-      name: `${accountData.platform}_${accountData.username}`,
-      platform: accountData.platform,
-      username: accountData.username,
-      created_at: new Date().toISOString(),
-      status: 'created',
-      browser_config: {
-        user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        screen_resolution: '1920x1080',
-        timezone: 'Europe/Moscow'
-      }
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${this.token}`,
+      'Content-Type': 'application/json'
+    }
+
+    const options: RequestInit = {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined
     }
     
-    this.profiles.set(profileId, profile)
-    
-    console.log(`🔨 Создан Multilogin профиль: ${profileId}`)
-    return profileId
+    try {
+      const response = await fetch(url, options)
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(`Multilogin API error: ${response.status} - ${data.message || 'Unknown error'}`)
+      }
+      
+      return data
+    } catch (error) {
+      console.error(`Multilogin API request failed:`, error)
+      throw error
+    }
+  }
+
+  async checkConnection(): Promise<boolean> {
+    try {
+      await this.makeRequest('/api/v1/profile')
+      return true
+    } catch (error) {
+      console.error('Multilogin connection failed:', error)
+      return false
+    }
+  }
+
+  async createProfile(accountData: any): Promise<any> {
+    const profileConfig = {
+      name: `${accountData.platform}_${accountData.username}_${Date.now()}`,
+      browser: 'mimic',
+      os: 'win',
+      startUrl: this.getStartUrl(accountData.platform),
+      browserSettings: {
+        userAgent: 'random',
+        screenWidth: 1920,
+        screenHeight: 1080,
+        language: 'en-US',
+        timezone: 'Europe/London'
+      },
+      proxySettings: accountData.proxy ? {
+        type: 'http',
+        host: accountData.proxy.host,
+        port: accountData.proxy.port,
+        username: accountData.proxy.username,
+        password: accountData.proxy.password
+      } : undefined,
+      automation: {
+        selenium: true,
+        puppeteer: true
+      }
+    }
+
+    const result = await this.makeRequest('/api/v1/profile', 'POST', profileConfig)
+    console.log(`✅ Multilogin профиль создан: ${result.uuid}`)
+    return result
   }
 
   async startProfile(profileId: string): Promise<any> {
-    const profile = this.profiles.get(profileId)
-    if (!profile) {
-      throw new Error(`Профиль ${profileId} не найден`)
-    }
-
-    // Эмуляция запуска профиля
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    const result = await this.makeRequest(`/api/v1/profile/start?automation_type=selenium&profileId=${profileId}`, 'GET')
     
-    profile.status = 'running'
-    profile.selenium_port = 9222 + Math.floor(Math.random() * 1000)
-    
-    console.log(`🚀 Запущен Multilogin профиль: ${profileId}`)
-    
+    console.log(`🚀 Multilogin профиль запущен: ${profileId}`)
     return {
       status: 'success',
-      selenium_port: profile.selenium_port,
+      selenium_port: result.automation.port,
+      webdriver_url: `http://localhost:${result.automation.port}`,
       profile_id: profileId
     }
   }
 
   async stopProfile(profileId: string): Promise<boolean> {
-    const profile = this.profiles.get(profileId)
-    if (!profile) {
+    try {
+      await this.makeRequest(`/api/v1/profile/stop?profileId=${profileId}`, 'GET')
+      console.log(`🛑 Multilogin профиль остановлен: ${profileId}`)
+      return true
+    } catch (error) {
+      console.error(`Ошибка остановки профиля ${profileId}:`, error)
       return false
     }
-
-    profile.status = 'stopped'
-    console.log(`🛑 Остановлен Multilogin профиль: ${profileId}`)
-    return true
   }
 
   async getProfiles(): Promise<any[]> {
-    return Array.from(this.profiles.values())
+    const result = await this.makeRequest('/api/v1/profile')
+    return result.data || []
+  }
+
+  private getStartUrl(platform: string): string {
+    const urls: Record<string, string> = {
+      'instagram': 'https://www.instagram.com/accounts/login/',
+      'telegram': 'https://web.telegram.org/',
+      'tiktok': 'https://www.tiktok.com/login',
+      'youtube': 'https://www.youtube.com/',
+      'reddit': 'https://www.reddit.com/login'
+    }
+    return urls[platform.toLowerCase()] || 'https://www.google.com'
   }
 }
 
@@ -86,16 +131,22 @@ serve(async (req) => {
   }
 
   try {
-    // Используем встроенный перманентный токен или создаем новый
-    let multiloginToken = Deno.env.get('MULTILOGIN_TOKEN')
+    // Получаем настройки Multilogin из секретов
+    const multiloginToken = Deno.env.get('MULTILOGIN_TOKEN')
+    const multiloginUrl = Deno.env.get('MULTILOGIN_URL') || 'https://api.multilogin.com'
     
     if (!multiloginToken) {
-      // Генерируем перманентный токен для демонстрации
-      multiloginToken = `ml_permanent_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`
-      console.log('🔑 Сгенерирован временный Multilogin токен:', multiloginToken)
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'MULTILOGIN_TOKEN не настроен',
+        message: 'Добавьте токен в Supabase секреты'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
 
-    const multilogin = new MultiloginAPIEmulator(multiloginToken)
+    const multilogin = new MultiloginAPIClient(multiloginUrl, multiloginToken)
 
     const url = new URL(req.url)
     const path = url.pathname
@@ -104,12 +155,17 @@ serve(async (req) => {
       const isConnected = await multilogin.checkConnection()
       
       return new Response(JSON.stringify({
-        status: 'ok',
+        status: isConnected ? 'connected' : 'disconnected',
         multilogin_connected: isConnected,
         timestamp: new Date().toISOString(),
-        version: '3.0.0-integrated',
-        token_type: multiloginToken.startsWith('ml_permanent') ? 'permanent' : 'environment',
-        api_mode: 'emulator'
+        version: '4.0.0-real-api',
+        api_url: multiloginUrl,
+        features: [
+          'profile_management', 
+          'selenium_automation', 
+          'proxy_integration',
+          'fingerprint_spoofing'
+        ]
       }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -142,12 +198,14 @@ serve(async (req) => {
         })
       }
 
-      const profileId = await multilogin.createProfile(accountData)
+      const profile = await multilogin.createProfile(accountData)
       
       return new Response(JSON.stringify({
         success: true,
-        profile_id: profileId,
-        message: 'Профиль создан успешно'
+        profile_id: profile.uuid,
+        profile_name: profile.name,
+        selenium_ready: profile.automation?.selenium || false,
+        message: 'Multilogin профиль создан успешно'
       }), {
         status: 201,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
