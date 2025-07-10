@@ -183,15 +183,23 @@ serve(async (req) => {
     const multiloginEmail = Deno.env.get('MULTILOGIN_EMAIL')
     const multiloginPassword = Deno.env.get('MULTILOGIN_PASSWORD')
 
+    console.log('🔧 Проверка секретов:')
+    console.log('📧 MULTILOGIN_EMAIL:', multiloginEmail ? '✅ Настроен' : '❌ Отсутствует')
+    console.log('🔒 MULTILOGIN_PASSWORD:', multiloginPassword ? '✅ Настроен' : '❌ Отсутствует')
+
     if (!multiloginEmail || !multiloginPassword) {
-      console.warn('⚠️ MULTILOGIN_EMAIL или MULTILOGIN_PASSWORD не настроены')
+      console.warn('⚠️ Учетные данные Multilogin не настроены!')
       return new Response(JSON.stringify({
         success: false,
         error: 'Учетные данные Multilogin не настроены',
         message: 'Добавьте MULTILOGIN_EMAIL и MULTILOGIN_PASSWORD в секреты Supabase',
+        missing_secrets: {
+          email: !multiloginEmail,
+          password: !multiloginPassword
+        },
         fix_instructions: 'Перейдите в настройки Edge Functions и добавьте секреты'
       }), {
-        status: 500,
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
