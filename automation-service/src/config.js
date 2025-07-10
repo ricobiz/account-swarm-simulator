@@ -1,9 +1,9 @@
 
-import { config } from 'dotenv';
+const { config } = require('dotenv');
 
 config();
 
-export const CONFIG = {
+const CONFIG = {
   supabase: {
     url: process.env.SUPABASE_URL || 'https://izmgzstdgoswlozinmyk.supabase.co',
     serviceKey: process.env.SUPABASE_SERVICE_KEY
@@ -46,3 +46,5 @@ export const CONFIG = {
     maxCpuUsage: parseInt(process.env.MAX_CPU_PERCENT) || 80
   }
 };
+
+module.exports = { CONFIG };

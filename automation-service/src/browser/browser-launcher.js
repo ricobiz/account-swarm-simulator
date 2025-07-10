@@ -1,37 +1,36 @@
 
-import { chromium } from 'playwright';
+const { Builder } = require('selenium-webdriver');
+const chrome = require('selenium-webdriver/chrome');
 
-export class BrowserLauncher {
+class BrowserLauncher {
   constructor(proxy = null) {
     this.proxy = proxy;
   }
 
   async launch() {
-    const launchOptions = {
-      headless: process.env.NODE_ENV === 'production',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-        '--disable-blink-features=AutomationControlled',
-        '--disable-features=VizDisplayCompositor',
-        '--flag-switches-begin --disable-site-isolation-trials --flag-switches-end'
-      ]
-    };
+    const options = new chrome.Options();
+    
+    // Добавляем аргументы для Railway
+    options.addArguments(
+      '--headless=new',
+      '--no-sandbox',
+      '--disable-setuid-sandbox', 
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--window-size=1920,1080',
+      '--disable-blink-features=AutomationControlled'
+    );
 
     if (this.proxy) {
-      launchOptions.proxy = {
-        server: `http://${this.proxy.ip}:${this.proxy.port}`,
-        username: this.proxy.username,
-        password: this.proxy.password
-      };
+      options.addArguments(`--proxy-server=http://${this.proxy.ip}:${this.proxy.port}`);
     }
 
-    return await chromium.launch(launchOptions);
+    const driver = await new Builder()
+      .forBrowser('chrome')
+      .setChromeOptions(options)
+      .build();
+      
+    return driver;
   }
 
   createContextOptions(fingerprint, storageState) {
@@ -81,3 +80,5 @@ export class BrowserLauncher {
     });
   }
 }
+
+module.exports = { BrowserLauncher };

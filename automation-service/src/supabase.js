@@ -1,13 +1,13 @@
 
-import { createClient } from '@supabase/supabase-js';
-import { CONFIG } from './config.js';
+const { createClient } = require('@supabase/supabase-js');
+const { CONFIG } = require('./config.js');
 
-export const supabase = createClient(
+const supabase = createClient(
   CONFIG.supabase.url,
   CONFIG.supabase.serviceKey
 );
 
-export class DatabaseService {
+class DatabaseService {
   async getPendingScenarios() {
     const { data, error } = await supabase
       .from('scenarios')
@@ -162,3 +162,5 @@ export class DatabaseService {
     return true;
   }
 }
+
+module.exports = { supabase, DatabaseService };

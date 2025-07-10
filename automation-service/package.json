@@ -1,18 +1,17 @@
 
 {
-  "name": "browser-automation-service",
+  "name": "browser-automation-service", 
   "version": "1.0.0",
   "description": "Browser automation service for social media management",
   "main": "src/index.js",
-  "type": "module",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js",
+    "dev": "node --watch src/index.js", 
     "test-proxies": "node src/scripts/test-proxies.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0",
-    "playwright": "^1.40.0",
+    "selenium-webdriver": "^4.15.0",
     "dotenv": "^16.3.1",
     "https-proxy-agent": "^7.0.2",
     "node-cron": "^3.0.3"
