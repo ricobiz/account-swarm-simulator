@@ -9,6 +9,8 @@ import { APIKeysManager } from './APIKeysManager';
 import { MacroExecutor } from './MacroExecutor';
 import { ScenarioManager } from './ScenarioManager';
 import { ImprovedAdvancedScenarioBuilder } from '../scenario-flow/ImprovedAdvancedScenarioBuilder';
+import { TestRPAButton } from '../TestRPAButton';
+import { MultiloginTestButton } from '../MultiloginTestButton';
 import { 
   Bot, 
   Settings, 
@@ -17,7 +19,8 @@ import {
   Server,
   ArrowLeft,
   Workflow,
-  Home
+  Home,
+  TestTube
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Node, Edge } from '@xyflow/react';
@@ -239,7 +242,7 @@ export const VisualRPABuilder: React.FC = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 bg-gray-800">
+          <TabsList className="grid w-full grid-cols-6 bg-gray-800">
             <TabsTrigger value="constructor" className="flex items-center gap-2">
               <Workflow className="h-4 w-4" />
               Конструктор
@@ -255,6 +258,10 @@ export const VisualRPABuilder: React.FC = () => {
             <TabsTrigger value="executor" className="flex items-center gap-2">
               <Play className="h-4 w-4" />
               Выполнение
+            </TabsTrigger>
+            <TabsTrigger value="testing" className="flex items-center gap-2">
+              <TestTube className="h-4 w-4" />
+              Тестирование
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
@@ -354,6 +361,57 @@ export const VisualRPABuilder: React.FC = () => {
                 onExecute={handleExecuteScenario}
                 isExecuting={executingScenario}
               />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="testing">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white">Тестирование RPA системы</h2>
+                <Button
+                  onClick={() => navigate('/')}
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-400 hover:text-white"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Вернуться в меню
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <TestRPAButton />
+                <MultiloginTestButton />
+              </div>
+              
+              <Card className="bg-gray-800/50 border-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-white">Информация о тестировании</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4 text-gray-300">
+                    <div>
+                      <h4 className="text-lg font-semibold mb-2">🔧 Доступные тесты:</h4>
+                      <ul className="list-disc list-inside space-y-2 ml-4">
+                        <li><strong>Базовый тест RPA:</strong> Проверка основных функций без входа в аккаунт</li>
+                        <li><strong>Telegram лайк:</strong> Автоматическая постановка лайка в Telegram канале</li>
+                        <li><strong>Multilogin тест:</strong> Полноценный тест с созданием профиля и входом в аккаунт</li>
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-lg font-semibold mb-2">🎯 Multilogin возможности:</h4>
+                      <ul className="list-disc list-inside space-y-2 ml-4">
+                        <li>Автоматическое создание браузерных профилей</li>
+                        <li>Обход антидетекта и защиты платформ</li>
+                        <li>Уникальные отпечатки браузера для каждого аккаунта</li>
+                        <li>Управление прокси и геолокацией</li>
+                        <li>Selenium интеграция для автоматизации</li>
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
