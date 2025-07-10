@@ -6,48 +6,70 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Симуляция выполнения RPA задач для тестирования
-async function simulateRPAExecution(task: any, multiloginProfile?: string): Promise<any> {
-  console.log('🎯 Симуляция выполнения RPA задачи:', task.taskId)
+// Реальное выполнение RPA задач через Railway RPA Bot
+async function executeRPATask(task: any, multiloginProfile?: string): Promise<any> {
+  console.log('🎯 Выполнение реальной RPA задачи:', task.taskId)
   
-  // Случайная задержка от 3 до 8 секунд
-  const delay = Math.random() * 5000 + 3000
-  await new Promise(resolve => setTimeout(resolve, delay))
-  
-  // Симуляция успешного выполнения с 85% вероятностью
-  const isSuccess = Math.random() > 0.15
-  
-  if (isSuccess) {
+  const rpaEndpoint = Deno.env.get('RPA_BOT_ENDPOINT')
+  if (!rpaEndpoint) {
+    throw new Error('RPA_BOT_ENDPOINT не настроен в секретах')
+  }
+
+  try {
+    console.log('📡 Отправляем задачу на Railway RPA Bot:', rpaEndpoint)
+    
+    const response = await fetch(`${rpaEndpoint}/execute`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        task_id: task.taskId,
+        actions: task.actions || [],
+        url: task.url || '',
+        account_data: task.metadata?.account || {},
+        multilogin_profile: multiloginProfile,
+        human_behavior: task.humanBehavior || true,
+        timeout: task.timeout || 60,
+        platform: task.metadata?.platform || 'unknown'
+      })
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`RPA Bot error: ${response.status} - ${errorText}`)
+    }
+
+    const result = await response.json()
+    console.log('✅ RPA задача выполнена реально:', result)
+    
     return {
-      success: true,
-      message: `Задача ${task.taskId} выполнена успешно`,
-      executionTime: Math.round(delay),
-      completedActions: task.actions?.length || 1,
+      success: result.success || false,
+      message: result.message || 'Задача выполнена',
+      executionTime: result.execution_time || 0,
+      completedActions: result.completed_actions || 0,
+      screenshot: result.screenshot || null,
       data: {
         platform: task.metadata?.platform || 'unknown',
-        account: task.metadata?.account?.username || 'test-account',
-        multilogin_profile: multiloginProfile || `simulated_profile_${Date.now()}`,
+        account: task.metadata?.account?.username || 'unknown',
+        multilogin_profile: multiloginProfile || null,
         multilogin_integrated: !!multiloginProfile,
-        screenshot_urls: [
-          `https://example.com/screenshot_${Date.now()}_1.png`,
-          `https://example.com/screenshot_${Date.now()}_2.png`
-        ],
-        browser_fingerprint: {
-          user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          screen_resolution: '1920x1080',
-          timezone: 'Europe/Moscow',
-          language: 'ru-RU'
-        }
+        screenshot_urls: result.screenshots || [],
+        browser_fingerprint: result.browser_info || {},
+        execution_details: result.logs || []
       }
     }
-  } else {
+    
+  } catch (error) {
+    console.error('❌ Ошибка выполнения реальной RPA задачи:', error.message)
     return {
       success: false,
-      error: 'Ошибка выполнения: Таймаут соединения с платформой',
-      executionTime: Math.round(delay),
+      error: error.message,
+      message: `Ошибка выполнения: ${error.message}`,
+      executionTime: 0,
       data: {
         platform: task.metadata?.platform || 'unknown',
-        account: task.metadata?.account?.username || 'test-account'
+        account: task.metadata?.account?.username || 'unknown'
       }
     }
   }
@@ -90,12 +112,12 @@ serve(async (req) => {
       const multiloginToken = Deno.env.get('MULTILOGIN_TOKEN')
       
       if (!multiloginToken) {
-        console.warn('⚠️ MULTILOGIN_TOKEN не найден, используем симуляцию')
+        console.warn('⚠️ MULTILOGIN_TOKEN не найден, пробуем автоматическую систему')
       }
 
       try {
-        // Используем встроенный Multilogin API эмулятор
-        console.log('🔄 Интеграция с Multilogin API...')
+        // Используем реальную интеграцию с Multilogin API
+        console.log('🔄 Интеграция с реальным Multilogin API...')
         
         // Вызываем функцию multilogin-api для создания профиля
         let multiloginProfile = null
@@ -116,7 +138,7 @@ serve(async (req) => {
           console.warn('⚠️ Ошибка создания Multilogin профиля:', error.message)
         }
         
-        const result = await simulateRPAExecution(task, multiloginProfile)
+        const result = await executeRPATask(task, multiloginProfile)
         
         // Обновляем результат в базе данных
         const status = result.success ? 'completed' : 'failed'

@@ -151,8 +151,29 @@ export const VisualRPABuilder: React.FC = () => {
     try {
       console.log('Executing scenario:', scenario);
       
-      // Симуляция выполнения
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Реальное выполнение через RPA API
+      const firstAction = scenario.actions?.[0];
+      const startUrl = firstAction?.url || 'https://google.com';
+      
+      const response = await fetch('/api/rpa/execute-macro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actions: scenario.actions || [],
+          url: startUrl,
+          humanBehavior: true
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`RPA execution failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Execution failed');
+      }
       
       toast({
         title: "Сценарий выполнен",

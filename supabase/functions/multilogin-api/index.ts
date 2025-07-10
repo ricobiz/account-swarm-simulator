@@ -6,77 +6,150 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Простая версия Multilogin API для тестирования
-class SimpleMultiloginAPI {
+// Реальная интеграция с Multilogin API
+class RealMultiloginAPI {
   constructor(token: string) {
     this.token = token
+    this.baseURL = 'https://api.multilogin.com'
   }
 
   private token: string
+  private baseURL: string
 
   async checkHealth(): Promise<boolean> {
-    console.log('🔍 Проверяем здоровье Multilogin API...')
+    console.log('🔍 Проверяем подключение к реальному Multilogin API...')
     try {
-      // Простая проверка без реального API
-      return !!this.token && this.token.length > 10
+      const response = await fetch(`${this.baseURL}/user/profile`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      console.log('📊 Статус ответа API:', response.status)
+      return response.ok
     } catch (error) {
-      console.error('❌ Ошибка проверки:', error)
+      console.error('❌ Ошибка подключения к Multilogin API:', error.message)
       return false
     }
   }
 
   async createProfile(platform: string, username: string, password: string): Promise<string> {
-    console.log(`🔄 Создаем профиль для ${platform}:${username}`)
+    console.log(`🔄 Создаем реальный профиль для ${platform}:${username}`)
     
-    // Симулируем создание профиля
-    const profileId = `profile_${platform}_${Date.now()}`
-    
-    await new Promise(resolve => setTimeout(resolve, 1000)) // Симуляция задержки
-    
-    console.log(`✅ Профиль создан: ${profileId}`)
-    return profileId
+    try {
+      const response = await fetch(`${this.baseURL}/profile`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: `${platform}_${username}_${Date.now()}`,
+          os: 'win',
+          browser: 'mimic',
+          platform_data: {
+            platform,
+            username,
+            password
+          }
+        })
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Multilogin API error: ${response.status} - ${errorText}`)
+      }
+
+      const data = await response.json()
+      const profileId = data.uuid || data.id
+      
+      console.log(`✅ Реальный профиль создан: ${profileId}`)
+      return profileId
+      
+    } catch (error) {
+      console.error('❌ Ошибка создания реального профиля:', error.message)
+      throw error
+    }
   }
 
   async startProfile(profileId: string): Promise<boolean> {
-    console.log(`🚀 Запускаем профиль: ${profileId}`)
+    console.log(`🚀 Запускаем реальный профиль: ${profileId}`)
     
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    console.log(`✅ Профиль запущен: ${profileId}`)
-    return true
+    try {
+      const response = await fetch(`${this.baseURL}/profile/start`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          uuid: profileId
+        })
+      })
+
+      const success = response.ok
+      console.log(`${success ? '✅' : '❌'} Результат запуска профиля: ${profileId}`)
+      return success
+      
+    } catch (error) {
+      console.error('❌ Ошибка запуска профиля:', error.message)
+      return false
+    }
   }
 
   async stopProfile(profileId: string): Promise<boolean> {
-    console.log(`🛑 Останавливаем профиль: ${profileId}`)
+    console.log(`🛑 Останавливаем реальный профиль: ${profileId}`)
     
-    await new Promise(resolve => setTimeout(resolve, 300))
-    
-    console.log(`✅ Профиль остановлен: ${profileId}`)
-    return true
+    try {
+      const response = await fetch(`${this.baseURL}/profile/stop`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          uuid: profileId
+        })
+      })
+
+      const success = response.ok
+      console.log(`${success ? '✅' : '❌'} Результат остановки профиля: ${profileId}`)
+      return success
+      
+    } catch (error) {
+      console.error('❌ Ошибка остановки профиля:', error.message)
+      return false
+    }
   }
 
   async getProfiles(): Promise<any[]> {
-    console.log('📋 Получаем список профилей...')
+    console.log('📋 Получаем список реальных профилей...')
     
-    // Возвращаем тестовые данные
-    return [
-      {
-        id: 'profile_test_1',
-        name: 'Test Profile 1',
-        platform: 'instagram',
-        username: 'test_user_1',
-        status: 'created',
-        created_at: new Date().toISOString()
-      },
-      {
-        id: 'profile_test_2',
-        name: 'Test Profile 2',
-        platform: 'telegram',
-        username: 'test_user_2',
-        status: 'running',
-        created_at: new Date().toISOString()
+    try {
+      const response = await fetch(`${this.baseURL}/profile`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
       }
-    ]
+
+      const data = await response.json()
+      const profiles = Array.isArray(data) ? data : data.profiles || []
+      
+      console.log(`✅ Получено ${profiles.length} реальных профилей`)
+      return profiles
+      
+    } catch (error) {
+      console.error('❌ Ошибка получения профилей:', error.message)
+      return []
+    }
   }
 }
 
@@ -119,7 +192,7 @@ serve(async (req) => {
       }
     }
 
-    const multiloginAPI = new SimpleMultiloginAPI(multiloginToken)
+    const multiloginAPI = new RealMultiloginAPI(multiloginToken)
 
     // Обрабатываем запросы
     if (req.method === 'POST') {

@@ -66,14 +66,26 @@ export const ServerBasedRPARecorder: React.FC<ServerBasedRPARecorderProps> = ({
 
       toast({
         title: "Запись началась",
-        description: "Сценарий записывается. Симуляция действий активна.",
+        description: "Сценарий записывается. Получаем скриншот...",
         duration: 3000
       });
 
-      // Симулируем получение скриншота
-      setTimeout(() => {
+      // Получаем реальный скриншот через Server RPA API
+      try {
+        const response = await fetch('/api/rpa/screenshot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: currentUrl || 'https://google.com' })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setScreenshot(data.screenshot);
+        }
+      } catch (error) {
+        console.warn('Failed to get screenshot:', error);
         setScreenshot('/placeholder.svg');
-      }, 1000);
+      }
 
     } catch (error) {
       toast({
