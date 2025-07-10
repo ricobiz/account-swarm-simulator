@@ -18,6 +18,6 @@
     "PYTHONUNBUFFERED": "1",
     "DISPLAY": ":99",
     "SELENIUM_LOG_LEVEL": "WARNING",
-    "PORT": "5000"
+    "PORT": "8080"
   }
 }
