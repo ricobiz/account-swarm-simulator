@@ -15,6 +15,7 @@ export default function TestFunctionality() {
   const [multiloginResult, setMultiloginResult] = useState<TestResult | null>(null);
   const [profileResult, setProfileResult] = useState<TestResult | null>(null);
   const [rpaResult, setRpaResult] = useState<TestResult | null>(null);
+  const [secretsResult, setSecretsResult] = useState<TestResult | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [loading, setLoading] = useState<{ [key: string]: boolean }>({});
 
@@ -135,6 +136,36 @@ export default function TestFunctionality() {
     }
   };
 
+  const testSecrets = async () => {
+    setLoading(prev => ({ ...prev, secrets: true }));
+    try {
+      log('🔍 Тестирование секретов и Edge Function...');
+      
+      const { data, error } = await supabase.functions.invoke('test-secrets', {
+        body: {}
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      log(`✅ Тест секретов выполнен: ${JSON.stringify(data, null, 2)}`, 'success');
+      setSecretsResult({
+        success: true,
+        message: 'Тест секретов выполнен успешно!',
+        data: data
+      });
+    } catch (error: any) {
+      log(`❌ Ошибка тестирования секретов: ${error.message}`, 'error');
+      setSecretsResult({
+        success: false,
+        message: error.message
+      });
+    } finally {
+      setLoading(prev => ({ ...prev, secrets: false }));
+    }
+  };
+
   React.useEffect(() => {
     log('🎯 Система тестирования запущена');
     log('📋 Готова к тестированию реальной функциональности');
@@ -147,7 +178,42 @@ export default function TestFunctionality() {
         <p className="text-muted-foreground">Проверка интеграции с Multilogin API и Railway RPA Bot</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {/* Тест секретов - самый важный */}
+        <Card className="border-yellow-500 bg-yellow-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-yellow-800">
+              🔍 Тест секретов
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button 
+              onClick={testSecrets}
+              disabled={loading.secrets}
+              className="w-full bg-yellow-600 hover:bg-yellow-700"
+            >
+              {loading.secrets ? 'Проверка...' : 'Проверить секреты'}
+            </Button>
+            {secretsResult && (
+              <div className={`p-3 rounded ${secretsResult.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+                <Badge variant={secretsResult.success ? 'default' : 'destructive'} className="mb-2">
+                  {secretsResult.success ? '✅ Успешно' : '❌ Ошибка'}
+                </Badge>
+                <p className="text-sm">{secretsResult.message}</p>
+                {secretsResult.data?.secrets_values && (
+                  <div className="text-xs mt-2">
+                    <p>EMAIL: {secretsResult.data.secrets_values.MULTILOGIN_EMAIL}</p>
+                    <p>PASSWORD: {secretsResult.data.secrets_values.MULTILOGIN_PASSWORD}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
         {/* Тест токенов Multilogin */}
         <Card>
           <CardHeader>
