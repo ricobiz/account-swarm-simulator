@@ -25,33 +25,47 @@ class SimpleTokenManager {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
   }
 
-  // Симуляция получения токена от Multilogin API
+  // Реальное получение токена от Multilogin API
   async getToken(): Promise<string> {
-    console.log('🔄 Симуляция получения Multilogin токена...')
+    console.log('🔄 Получение реального Multilogin токена...')
     
     try {
-      // Хешируем пароль
-      const passwordHash = await this.hashPassword(this.password)
-      console.log('🔐 Пароль захеширован')
+      console.log('📡 Делаем запрос к api.multilogin.com/user/signin')
       
-      // Симулируем запрос к Multilogin API
-      console.log('📡 Симулируем запрос к api.multilogin.com/user/signin')
+      const response = await fetch('https://api.multilogin.com/user/signin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          email: this.email,
+          password: this.password
+        })
+      })
       
-      // Искусственная задержка убрана для стабильности
-      // В реальной ситуации здесь был бы запрос к Multilogin API
+      console.log('📊 Статус ответа:', response.status)
       
-      // Генерируем фейковый, но реалистичный токен
-      const timestamp = Date.now()
-      const tokenData = `${this.email}:${timestamp}:${passwordHash.substring(0, 16)}`
-      const tokenHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(tokenData))
-      const tokenArray = Array.from(new Uint8Array(tokenHash))
-      const token = tokenArray.map(b => b.toString(16).padStart(2, '0')).join('')
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('❌ Ошибка от Multilogin API:', response.status, errorText)
+        throw new Error(`Multilogin API error: ${response.status} - ${errorText}`)
+      }
       
-      console.log('✅ Токен успешно "получен" от Multilogin API')
+      const data = await response.json()
+      console.log('📦 Получен ответ от Multilogin API')
+      
+      if (!data.token && !data.access_token) {
+        console.error('❌ Токен не найден в ответе:', data)
+        throw new Error('Токен не найден в ответе от Multilogin API')
+      }
+      
+      const token = data.token || data.access_token
+      console.log('✅ Токен успешно получен от Multilogin API')
       return token
       
     } catch (error) {
-      console.error('❌ Ошибка получения токена:', error)
+      console.error('❌ Ошибка получения токена:', error.message)
       throw error
     }
   }
