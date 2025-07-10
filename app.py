@@ -1,68 +1,81 @@
 #!/usr/bin/env python3
 """
-Простое RPA Bot приложение для Railway
+Минимальный RPA бот для Railway
 """
 
 import os
-import json
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import threading
-import time
+import logging
+from flask import Flask, jsonify, request
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 
-class HealthHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        if self.path == '/health':
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            response = {
-                'status': 'healthy',
-                'service': 'account-swarm-simulator',
-                'timestamp': time.time()
-            }
-            self.wfile.write(json.dumps(response).encode())
-        elif self.path == '/':
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-            html = """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Account Swarm Simulator</title>
-            </head>
-            <body>
-                <h1>Account Swarm Simulator</h1>
-                <p>RPA Bot Cloud Service is running!</p>
-                <p>Status: <span style="color: green;">Active</span></p>
-                <p>Version: 1.0.0</p>
-                <p><a href="/health">Health Check</a></p>
-            </body>
-            </html>
-            """
-            self.wfile.write(html.encode())
-        else:
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(b'Not Found')
+# Настройка логирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-    def log_message(self, format, *args):
-        # Подавляем логи HTTP сервера
-        pass
+app = Flask(__name__)
 
-def run_server():
-    port = int(os.environ.get('PORT', 8080))
-    server = HTTPServer(('0.0.0.0', port), HealthHandler)
-    print(f"🚀 Account Swarm Simulator запущен на порту {port}")
-    print(f"🌐 Доступен по адресу: http://0.0.0.0:{port}")
-    print(f"💚 Health check: http://0.0.0.0:{port}/health")
-    server.serve_forever()
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Проверка здоровья"""
+    return jsonify({
+        'status': 'healthy',
+        'version': '1.0.0-minimal'
+    })
+
+@app.route('/test', methods=['GET'])
+def test_browser():
+    """Тест браузера"""
+    try:
+        logger.info("Тестируем браузер...")
+        
+        options = Options()
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        
+        driver = webdriver.Chrome(options=options)
+        driver.get("https://www.google.com")
+        title = driver.title
+        driver.quit()
+        
+        logger.info(f"Тест успешен: {title}")
+        return jsonify({
+            'success': True,
+            'title': title
+        })
+        
+    except Exception as e:
+        logger.error(f"Ошибка теста: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/execute', methods=['POST'])
+def execute_task():
+    """Выполнение задачи"""
+    try:
+        task = request.get_json()
+        task_id = task.get('taskId', 'unknown')
+        
+        logger.info(f"Получена задача: {task_id}")
+        
+        return jsonify({
+            'success': True,
+            'taskId': task_id,
+            'message': 'Задача принята'
+        })
+        
+    except Exception as e:
+        logger.error(f"Ошибка выполнения: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 if __name__ == '__main__':
-    try:
-        run_server()
-    except KeyboardInterrupt:
-        print("\n🛑 Сервер остановлен")
-    except Exception as e:
-        print(f"❌ Ошибка: {e}")
+    port = int(os.environ.get('PORT', 8080))
+    logger.info(f"Запуск на порту {port}")
+    app.run(host='0.0.0.0', port=port, debug=False)
 
