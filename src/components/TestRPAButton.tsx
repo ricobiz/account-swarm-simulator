@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRPAService } from '@/hooks/useRPAService';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { PlayCircle, Loader2, Heart } from 'lucide-react';
 import type { RPATask } from '@/types/rpa';
 
@@ -131,7 +132,31 @@ export const TestRPAButton: React.FC = () => {
     setTestLog([]);
     
     try {
-      addLog('Начинаем базовый тест RPA системы');
+      addLog('🚀 Начинаем базовый тест RPA системы');
+      
+      // Сначала проверяем статус Railway бота
+      addLog('📡 Проверяем статус Railway бота...');
+      try {
+        const { data: statusData, error: statusError } = await supabase.functions.invoke('rpa-bot-status');
+        addLog(`📊 Статус Railway: ${JSON.stringify(statusData)}`);
+        if (statusError) {
+          addLog(`❌ Ошибка проверки Railway: ${JSON.stringify(statusError)}`);
+        }
+      } catch (error: any) {
+        addLog(`💥 Критическая ошибка проверки Railway: ${error.message}`);
+      }
+      
+      // Проверяем автоматические токены
+      addLog('🔑 Проверяем автоматические токены...');
+      try {
+        const { data: tokenData, error: tokenError } = await supabase.functions.invoke('multilogin-token-manager');
+        addLog(`🎫 Статус токенов: ${JSON.stringify(tokenData)}`);
+        if (tokenError) {
+          addLog(`❌ Ошибка проверки токенов: ${JSON.stringify(tokenError)}`);
+        }
+      } catch (error: any) {
+        addLog(`💥 Критическая ошибка проверки токенов: ${error.message}`);
+      }
       
       // Создаем простую тестовую задачу
       const testTask: RPATask = {
@@ -169,35 +194,35 @@ export const TestRPAButton: React.FC = () => {
         description: "Отправляем задачу RPA-боту..."
       });
 
-      addLog('Отправляем задачу RPA-боту...');
+      addLog('📤 Отправляем задачу RPA-боту...');
 
       // Отправляем задачу
       const submitResult = await submitRPATask(testTask);
       
-      addLog(`Результат отправки: ${JSON.stringify(submitResult)}`);
+      addLog(`📥 Результат отправки: ${JSON.stringify(submitResult)}`);
       
       if (!submitResult.success) {
         throw new Error(submitResult.error || 'Ошибка отправки задачи');
       }
 
-      addLog('Задача успешно отправлена, ждем выполнения...');
+      addLog('✅ Задача успешно отправлена, ждем выполнения...');
 
       toast({
-        title: "Задача отправлена",
+        title: "📤 Задача отправлена",
         description: "Ожидаем выполнения RPA-ботом..."
       });
 
       // Ждем результат с подробным логированием
-      addLog('Начинаем ожидание результата (таймаут 30 секунд)...');
+      addLog('⏳ Начинаем ожидание результата (таймаут 30 секунд)...');
       const result = await waitForRPACompletion(testTask.taskId, 30000);
 
-      addLog(`Получен результат: ${JSON.stringify(result)}`);
+      addLog(`📋 Получен результат: ${JSON.stringify(result)}`);
 
       if (result?.success) {
-        addLog('✅ Тест завершен успешно!');
+        addLog('🎉 Тест завершен успешно!');
         toast({
-          title: "✅ RPA тест прошел успешно!",
-          description: result.message || 'Задача выполнена'
+          title: "🎉 RPA тест прошел успешно!",
+          description: result.message || 'Задача выполнена. Проверьте логи для подробностей.'
         });
       } else {
         addLog(`❌ Тест завершился с ошибкой: ${result?.error || 'Неизвестная ошибка'}`);
@@ -210,11 +235,11 @@ export const TestRPAButton: React.FC = () => {
 
     } catch (error: any) {
       addLog(`💥 Критическая ошибка: ${error.message}`);
-      console.error('Полная ошибка теста RPA:', error);
+      console.error('💥 Полная ошибка теста RPA:', error);
       
       toast({
-        title: "Ошибка выполнения теста",
-        description: error.message,
+        title: "💥 Ошибка выполнения теста",
+        description: `${error.message}. Проверьте логи выше для диагностики.`,
         variant: "destructive"
       });
     } finally {
