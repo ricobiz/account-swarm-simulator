@@ -107,9 +107,11 @@ export const useMultilogin = () => {
     try {
       setApiState(prev => ({ ...prev, isLoading: true }));
 
+      // Используем новую систему автоматических токенов
       const { data, error } = await supabase.functions.invoke('multilogin-api', {
         body: { 
           action: 'create_profile',
+          use_auto_tokens: true, // Включаем автоматические токены
           ...accountData 
         }
       });
@@ -120,8 +122,8 @@ export const useMultilogin = () => {
       
       if (profileId) {
         toast({
-          title: "Профиль создан",
-          description: `Multilogin профиль ${profileId} создан успешно`
+          title: "Профиль создан с автоматическими токенами",
+          description: `Multilogin профиль ${profileId} создан с обновленной системой токенов`
         });
 
         // Обновляем список профилей
@@ -150,10 +152,12 @@ export const useMultilogin = () => {
     try {
       setApiState(prev => ({ ...prev, isLoading: true }));
 
+      // Используем новую систему автоматических токенов
       const { data, error } = await supabase.functions.invoke('multilogin-api', {
         body: { 
           action: 'start_profile',
-          profile_id: profileId 
+          profile_id: profileId,
+          use_auto_tokens: true // Включаем автоматические токены
         }
       });
 
@@ -163,8 +167,8 @@ export const useMultilogin = () => {
       
       if (success) {
         toast({
-          title: "Профиль запущен",
-          description: `Multilogin профиль ${profileId} запущен`
+          title: "Профиль запущен с автоматическими токенами",
+          description: `Multilogin профиль ${profileId} запущен с обновленной системой`
         });
 
         // Обновляем список профилей
@@ -237,6 +241,56 @@ export const useMultilogin = () => {
     checkConnection();
   }, []);
 
+  // Новая функция для получения статуса токенов
+  const getTokenStatus = async (): Promise<{ hasToken: boolean; isExpired?: boolean; message?: string }> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('multilogin-token-manager');
+      
+      if (error) {
+        return { hasToken: false, message: 'Нет активного токена' };
+      }
+      
+      return { 
+        hasToken: data?.success || false, 
+        message: data?.message || 'Статус токена неизвестен'
+      };
+    } catch (error) {
+      return { hasToken: false, message: 'Ошибка проверки токена' };
+    }
+  };
+
+  // Новая функция для принудительного обновления токена
+  const refreshToken = async (): Promise<boolean> => {
+    try {
+      setApiState(prev => ({ ...prev, isLoading: true }));
+      
+      const { data, error } = await supabase.functions.invoke('multilogin-token-manager', {
+        method: 'POST'
+      });
+      
+      if (error) throw error;
+      
+      if (data?.success) {
+        toast({
+          title: "Токен обновлен",
+          description: "Multilogin токен успешно обновлен и готов к работе"
+        });
+        return true;
+      }
+      
+      return false;
+    } catch (error: any) {
+      toast({
+        title: "Ошибка обновления токена",
+        description: error.message,
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setApiState(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
   return {
     ...apiState,
     checkConnection,
@@ -244,6 +298,8 @@ export const useMultilogin = () => {
     createProfile,
     startProfile,
     stopProfile,
+    getTokenStatus,
+    refreshToken,
     refresh: async () => {
       await checkConnection();
       if (apiState.isConnected) {

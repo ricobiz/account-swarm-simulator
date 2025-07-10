@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react';
 
 export interface ProcessStatus {
   id: string;
-  type: 'scenario_save' | 'scenario_launch' | 'account_update' | 'template_create';
+  type: 'scenario_save' | 'scenario_launch' | 'account_update' | 'template_create' | 'rpa_execution';
   name: string;
   status: 'pending' | 'running' | 'completed' | 'failed' | 'stuck';
   progress: number;

@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MultiloginTestButton } from '@/components/MultiloginTestButton';
 import { TestRPAButton } from '@/components/TestRPAButton';
+import { MultiloginTokenStatus } from '@/components/MultiloginTokenStatus';
 import { MultiloginStatus } from './MultiloginStatus';
 import { CloudRPAStatus } from './CloudRPAStatus';
 import { RPATaskMonitor } from './RPATaskMonitor';
@@ -183,11 +184,12 @@ export const EnhancedRPADashboard: React.FC = () => {
 
         {/* Тестирование */}
         <TabsContent value="testing" className="space-y-6">
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <TestRPAButton />
             <MultiloginTestButton />
+            <MultiloginTokenStatus />
             
-            <Card className="bg-gray-800/50 border-gray-700 xl:col-span-2">
+            <Card className="bg-gray-800/50 border-gray-700 xl:col-span-3">
               <CardHeader>
                 <CardTitle className="text-white">Информация о тестировании</CardTitle>
               </CardHeader>
