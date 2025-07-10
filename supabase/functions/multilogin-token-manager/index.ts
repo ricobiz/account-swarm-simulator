@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createHash } from "https://deno.land/std@0.194.0/crypto/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,13 +17,9 @@ class SimpleTokenManager {
   private email: string
   private password: string
 
-  // Простое хеширование пароля
-  private async hashPassword(password: string): Promise<string> {
-    const encoder = new TextEncoder()
-    const data = encoder.encode(password + 'multilogin_salt')
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+  // MD5 хэширование пароля для Multilogin API
+  private hashPassword(password: string): string {
+    return createHash("md5").update(password).toString();
   }
 
   // Реальное получение токена от Multilogin API
@@ -40,7 +37,7 @@ class SimpleTokenManager {
         },
         body: JSON.stringify({
           email: this.email,
-          password: this.password
+          password: this.hashPassword(this.password)
         })
       })
       
