@@ -1,168 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { createHash } from "https://deno.land/std@0.194.0/crypto/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-// Упрощенная система управления токенами Multilogin
-class SimpleTokenManager {
-  constructor(email: string, password: string) {
-    this.email = email
-    this.password = password
-  }
-
-  private email: string
-  private password: string
-
-  // MD5 хэширование пароля для Multilogin API
-  private hashPassword(password: string): string {
-    return createHash("md5").update(password).toString();
-  }
-
-  // Реальное получение токена от Multilogin API
-  async getToken(): Promise<string> {
-    console.log('🔄 Получение реального Multilogin токена...')
-    
-    try {
-      console.log('📡 Делаем запрос к api.multilogin.com/user/signin')
-      
-      const response = await fetch('https://api.multilogin.com/user/signin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          email: this.email,
-          password: this.hashPassword(this.password)
-        })
-      })
-      
-      console.log('📊 Статус ответа:', response.status)
-      
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('❌ Ошибка от Multilogin API:', response.status, errorText)
-        throw new Error(`Multilogin API error: ${response.status} - ${errorText}`)
-      }
-      
-      const data = await response.json()
-      console.log('📦 Получен ответ от Multilogin API')
-      
-      if (!data.token && !data.access_token) {
-        console.error('❌ Токен не найден в ответе:', data)
-        throw new Error('Токен не найден в ответе от Multilogin API')
-      }
-      
-      const token = data.token || data.access_token
-      console.log('✅ Токен успешно получен от Multilogin API')
-      return token
-      
-    } catch (error) {
-      console.error('❌ Ошибка получения токена:', error.message)
-      throw error
-    }
-  }
-
-  // Сохранение токена в базу данных
-  async saveToken(token: string, supabase: any): Promise<void> {
-    const expiresAt = new Date(Date.now() + (25 * 60 * 1000)) // 25 минут
-    
-    try {
-      // Деактивируем старые токены
-      const { error: updateError } = await supabase
-        .from('multilogin_tokens')
-        .update({ is_active: false })
-        .eq('email', this.email)
-
-      if (updateError) {
-        console.warn('⚠️ Ошибка деактивации старых токенов:', updateError)
-      }
-
-      // Сохраняем новый токен
-      const { error: insertError } = await supabase
-        .from('multilogin_tokens')
-        .insert({
-          email: this.email,
-          token: token,
-          expires_at: expiresAt.toISOString(),
-          is_active: true
-        })
-
-      if (insertError) {
-        throw insertError
-      }
-
-      console.log('💾 Токен сохранен в базу данных')
-      console.log('⏰ Действителен до:', expiresAt.toLocaleString())
-      
-    } catch (error) {
-      console.error('❌ Ошибка сохранения токена:', error)
-      throw error
-    }
-  }
-
-  // Получение актуального токена из базы
-  async getCurrentToken(supabase: any): Promise<string | null> {
-    try {
-      const { data, error } = await supabase
-        .from('multilogin_tokens')
-        .select('*')
-        .eq('email', this.email)
-        .eq('is_active', true)
-        .gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (error) {
-        console.error('❌ Ошибка получения токена из базы:', error)
-        return null
-      }
-
-      if (data) {
-        console.log('✅ Найден активный токен в базе')
-        return data.token
-      } else {
-        console.log('ℹ️ Активных токенов не найдено')
-        return null
-      }
-    } catch (error) {
-      console.error('❌ Ошибка поиска токена:', error)
-      return null
-    }
-  }
-
-  // Обновление/создание токена
-  async refreshToken(supabase: any): Promise<string> {
-    try {
-      console.log('🔄 Начинаем обновление токена...')
-      
-      // Проверяем есть ли актуальный токен
-      const existingToken = await this.getCurrentToken(supabase)
-      if (existingToken) {
-        console.log('✅ Активный токен уже существует, используем его')
-        return existingToken
-      }
-
-      // Получаем новый токен
-      console.log('🔄 Получаем новый токен...')
-      const newToken = await this.getToken()
-      
-      // Сохраняем в базу
-      await this.saveToken(newToken, supabase)
-      
-      console.log('🎉 Токен успешно обновлен!')
-      return newToken
-      
-    } catch (error) {
-      console.error('❌ Ошибка обновления токена:', error.message)
-      throw error
-    }
-  }
 }
 
 serve(async (req) => {
@@ -176,44 +17,41 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Получаем учетные данные из секретов
-    const multiloginEmail = Deno.env.get('MULTILOGIN_EMAIL')
-    const multiloginPassword = Deno.env.get('MULTILOGIN_PASSWORD')
+    // Получаем automation token из секретов
+    const automationToken = Deno.env.get('MULTILOGIN_TOKEN')
 
-    console.log('🔧 Проверка секретов:')
-    console.log('📧 MULTILOGIN_EMAIL:', multiloginEmail ? '✅ Настроен' : '❌ Отсутствует')
-    console.log('🔒 MULTILOGIN_PASSWORD:', multiloginPassword ? '✅ Настроен' : '❌ Отсутствует')
+    console.log('🔧 Проверка MULTILOGIN_TOKEN:', automationToken ? '✅ Есть' : '❌ Отсутствует')
 
-    if (!multiloginEmail || !multiloginPassword) {
-      console.warn('⚠️ Учетные данные Multilogin не настроены!')
+    if (!automationToken) {
+      console.warn('⚠️ MULTILOGIN_TOKEN не настроен!')
       return new Response(JSON.stringify({
         success: false,
-        error: 'Учетные данные Multilogin не настроены',
-        message: 'Добавьте MULTILOGIN_EMAIL и MULTILOGIN_PASSWORD в секреты Supabase',
-        missing_secrets: {
-          email: !multiloginEmail,
-          password: !multiloginPassword
-        },
-        fix_instructions: 'Перейдите в настройки Edge Functions и добавьте секреты'
+        error: 'MULTILOGIN_TOKEN не настроен',
+        message: 'Добавьте automation token в секреты Supabase',
+        fix_instructions: 'Получите automation token из Multilogin и добавьте как MULTILOGIN_TOKEN'
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    const tokenManager = new SimpleTokenManager(multiloginEmail, multiloginPassword)
-
     if (req.method === 'GET') {
-      // Получить текущий токен
-      console.log('📋 Запрос на получение текущего токена')
-      const currentToken = await tokenManager.getCurrentToken(supabase)
+      // Получить информацию о токене
+      console.log('📋 Запрос на получение информации о токене')
       
-      if (currentToken) {
+      const { data, error } = await supabase
+        .from('multilogin_tokens')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (data && new Date() < new Date(data.expires_at)) {
         return new Response(JSON.stringify({
           success: true,
-          token: currentToken,
           message: 'Активный токен найден в базе данных',
-          expires_info: 'Токен действует 25 минут',
+          expires_at: data.expires_at,
           timestamp: new Date().toISOString()
         }), {
           status: 200,
@@ -223,7 +61,6 @@ serve(async (req) => {
         return new Response(JSON.stringify({
           success: false,
           message: 'Нет активного токена, требуется обновление',
-          action_needed: 'Отправьте POST запрос для получения нового токена',
           timestamp: new Date().toISOString()
         }), {
           status: 404,
@@ -233,18 +70,44 @@ serve(async (req) => {
     }
 
     if (req.method === 'POST') {
-      // Принудительное обновление токена
-      console.log('🔄 Запрос на обновление токена')
+      // Сохранить automation token в базу данных
+      console.log('💾 Сохранение automation token в базу данных')
       
       try {
-        const newToken = await tokenManager.refreshToken(supabase)
+        const expiresAt = new Date(Date.now() + (24 * 60 * 60 * 1000)) // 24 часа
+        
+        // Деактивируем старые токены
+        const { error: updateError } = await supabase
+          .from('multilogin_tokens')
+          .update({ is_active: false })
+          .neq('id', '00000000-0000-0000-0000-000000000000') // обновляем все существующие
+
+        if (updateError) {
+          console.warn('⚠️ Ошибка деактивации старых токенов:', updateError)
+        }
+
+        // Сохраняем automation token
+        const { error: insertError } = await supabase
+          .from('multilogin_tokens')
+          .insert({
+            email: 'automation-token',
+            token: automationToken,
+            expires_at: expiresAt.toISOString(),
+            is_active: true
+          })
+
+        if (insertError) {
+          throw insertError
+        }
+
+        console.log('✅ Automation token сохранен в базу данных')
+        console.log('⏰ Действителен до:', expiresAt.toLocaleString())
         
         return new Response(JSON.stringify({
           success: true,
-          token: newToken,
-          message: 'Новый токен успешно получен и сохранен',
-          expires_in_minutes: 25,
-          next_refresh: new Date(Date.now() + 25 * 60 * 1000).toISOString(),
+          message: 'Automation token успешно сохранен',
+          expires_in_hours: 24,
+          next_refresh: expiresAt.toISOString(),
           timestamp: new Date().toISOString()
         }), {
           status: 200,
@@ -253,7 +116,7 @@ serve(async (req) => {
       } catch (error) {
         return new Response(JSON.stringify({
           success: false,
-          error: 'Ошибка обновления токена',
+          error: 'Ошибка сохранения токена',
           message: error.message,
           timestamp: new Date().toISOString()
         }), {
@@ -267,8 +130,8 @@ serve(async (req) => {
       success: false,
       error: 'Метод не поддерживается',
       supported_methods: ['GET', 'POST'],
-      get_description: 'Получить текущий токен',
-      post_description: 'Обновить/создать новый токен'
+      get_description: 'Получить информацию о токене',
+      post_description: 'Сохранить automation token в базу'
     }), {
       status: 405,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
