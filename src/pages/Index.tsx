@@ -16,7 +16,8 @@ import {
   Server,
   PlayCircle,
   BarChart3,
-  UserCheck
+  UserCheck,
+  TestTube
 } from 'lucide-react';
 
 const Index: React.FC = () => {
@@ -192,6 +193,26 @@ const Index: React.FC = () => {
               <div className="flex items-center text-red-400 text-sm">
                 <Settings className="h-4 w-4 mr-1" />
                 Панель админа
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Test Functionality */}
+          <Card className="bg-orange-800 border-orange-700 hover:bg-orange-750 transition-colors cursor-pointer animate-pulse"
+                onClick={() => navigate('/test')}>
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <TestTube className="h-5 w-5 text-orange-300" />
+                🧪 Тест функций
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-orange-100 text-sm mb-4">
+                Протестировать реальную работу Multilogin API и Railway RPA Bot
+              </p>
+              <div className="flex items-center text-orange-300 text-sm">
+                <TestTube className="h-4 w-4 mr-1" />
+                Запустить тесты
               </div>
             </CardContent>
           </Card>
