@@ -37,9 +37,17 @@ export const MultiloginTokenStatus: React.FC = () => {
   };
 
   const handleRefreshToken = async () => {
+    console.log('🔴 НАЧАЛО handleRefreshToken');
     setLoading(true);
     try {
       console.log('🔄 Начинаем обновление токена...');
+      console.log('🔄 refreshToken функция:', typeof refreshToken);
+      
+      if (!refreshToken) {
+        console.error('❌ refreshToken функция недоступна!');
+        return;
+      }
+      
       const success = await refreshToken();
       console.log('🔄 Результат обновления токена:', success);
       
@@ -50,7 +58,10 @@ export const MultiloginTokenStatus: React.FC = () => {
           await checkTokenStatus();
         }, 1000);
       }
+    } catch (error) {
+      console.error('❌ Ошибка в handleRefreshToken:', error);
     } finally {
+      console.log('🏁 КОНЕЦ handleRefreshToken');
       setLoading(false);
     }
   };
