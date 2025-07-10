@@ -27,12 +27,25 @@ def health_check():
 def test_browser():
     """Тест браузера"""
     try:
-        logger.info("Тестируем браузер...")
+        logger.info("Настройка Chrome для Railway...")
         
         options = Options()
-        options.add_argument('--headless')
+        # Критически важные опции для Railway
+        options.add_argument('--headless=new')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--disable-gpu')
+        options.add_argument('--disable-extensions')
+        options.add_argument('--disable-plugins')
+        options.add_argument('--disable-images')
+        options.add_argument('--disable-javascript')
+        options.add_argument('--disable-web-security')
+        options.add_argument('--disable-features=VizDisplayCompositor')
+        options.add_argument('--window-size=1920,1080')
+        options.add_argument('--remote-debugging-port=9222')
+        
+        # Явно указываем путь к Chrome
+        options.binary_location = '/usr/bin/google-chrome-stable'
         
         driver = webdriver.Chrome(options=options)
         driver.get("https://www.google.com")
