@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -131,21 +132,35 @@ serve(async (req) => {
   }
 
   try {
-    // Получаем настройки Multilogin из секретов
-    const multiloginToken = Deno.env.get('MULTILOGIN_TOKEN')
-    const multiloginUrl = Deno.env.get('MULTILOGIN_URL') || 'https://api.multilogin.com'
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    // Получаем актуальный токен из автоматической системы
+    const { data: tokenData, error: tokenError } = await supabase.functions.invoke('multilogin-token-manager')
     
+    let multiloginToken = null
+    if (tokenData?.success) {
+      multiloginToken = tokenData.token
+      console.log('✅ Использую автоматический токен из системы')
+    } else {
+      console.warn('⚠️ Автоматический токен недоступен, используем из секретов')
+      multiloginToken = Deno.env.get('MULTILOGIN_TOKEN')
+    }
+
     if (!multiloginToken) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'MULTILOGIN_TOKEN не настроен',
-        message: 'Добавьте токен в Supabase секреты'
+        error: 'Multilogin токен недоступен',
+        message: 'Настройте MULTILOGIN_EMAIL и MULTILOGIN_PASSWORD или MULTILOGIN_TOKEN'
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
+    const multiloginUrl = Deno.env.get('MULTILOGIN_URL') || 'https://api.multilogin.com'
     const multilogin = new MultiloginAPIClient(multiloginUrl, multiloginToken)
 
     const url = new URL(req.url)
