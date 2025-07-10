@@ -6,7 +6,9 @@ import { supabase } from '@/integrations/supabase/client'
 
 export const MultiloginAuthTester = () => {
   const [testing, setTesting] = useState(false)
+  const [checkingSecrets, setCheckingSecrets] = useState(false)
   const [results, setResults] = useState<any>(null)
+  const [secretsResults, setSecretsResults] = useState<any>(null)
   const { toast } = useToast()
 
   const testMultiloginAuth = async () => {
@@ -45,8 +47,63 @@ export const MultiloginAuthTester = () => {
     }
   }
 
+  const checkSecrets = async () => {
+    setCheckingSecrets(true)
+    try {
+      console.log('🔄 Проверка секретов Multilogin...')
+      
+      const { data, error } = await supabase.functions.invoke('check-multilogin-secrets', {
+        body: {},
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (error) {
+        throw error
+      }
+      
+      setSecretsResults(data)
+      console.log('📋 Статус секретов:', data)
+      
+      toast({
+        title: "Проверка секретов завершена",
+        description: "Проверьте результаты ниже",
+      })
+      
+    } catch (error) {
+      console.error('❌ Ошибка проверки секретов:', error)
+      toast({
+        title: "Ошибка проверки секретов",
+        description: error.message,
+        variant: "destructive",
+      })
+    } finally {
+      setCheckingSecrets(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>🔧 Проверка секретов</CardTitle>
+          <CardDescription>
+            Сначала проверьте, правильно ли настроены учетные данные Multilogin
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            onClick={checkSecrets} 
+            disabled={checkingSecrets}
+            className="w-full mb-4"
+            variant="secondary"
+          >
+            {checkingSecrets ? '🔄 Проверка...' : '🔍 Проверить секреты'}
+          </Button>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>🧪 Тест Multilogin API</CardTitle>
@@ -64,6 +121,44 @@ export const MultiloginAuthTester = () => {
           </Button>
         </CardContent>
       </Card>
+
+      {secretsResults && (
+        <Card>
+          <CardHeader>
+            <CardTitle>🔐 Статус секретов</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {Object.entries(secretsResults.secrets_status || {}).map(([key, info]: [string, any]) => (
+                <div key={key} className="border rounded p-3">
+                  <div className="font-medium">{key}</div>
+                  <div className="text-sm mt-1 space-y-1">
+                    <div className={info.configured ? 'text-green-600' : 'text-red-600'}>
+                      {info.configured ? '✅ Настроен' : '❌ НЕ настроен'}
+                    </div>
+                    {info.configured && (
+                      <div className="text-gray-600">
+                        Значение: {info.value || info.first_3_chars || info.first_10_chars} (длина: {info.length})
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              
+              {secretsResults.recommendations && (
+                <div className="bg-blue-50 p-3 rounded mt-4">
+                  <strong>Рекомендации:</strong>
+                  <ul className="list-disc list-inside mt-1">
+                    {secretsResults.recommendations.map((rec: string, index: number) => (
+                      <li key={index} className="text-sm">{rec}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {results && (
         <Card>

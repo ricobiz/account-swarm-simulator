@@ -2,3 +2,6 @@ project_id = "izmgzstdgoswlozinmyk"
 
 [functions.test-multilogin-auth]
 verify_jwt = false
+
+[functions.check-multilogin-secrets]
+verify_jwt = false
