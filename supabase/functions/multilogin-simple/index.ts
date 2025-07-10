@@ -40,143 +40,55 @@ serve(async (req) => {
       })
     }
 
-    console.log('✅ Секреты найдены, пробуем простой запрос к Multilogin API...')
+    console.log('✅ Секреты найдены')
+    console.log('ℹ️ ВАЖНО: Multilogin работает через Local API на localhost:35000')
+    console.log('ℹ️ Edge Functions не могут обращаться к localhost пользователя')
+    console.log('ℹ️ Нужен automation token или запуск automation-service локально')
 
-    try {
-      const response = await fetch('https://api.multilogin.com/user/signin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          email: multiloginEmail,
-          password: multiloginPassword
-        })
-      })
+    // Проверяем есть ли automation token
+    const automationToken = Deno.env.get('MULTILOGIN_TOKEN')
+    if (automationToken) {
+      console.log('✅ Найден MULTILOGIN_TOKEN, пробуем его использовать')
       
-      console.log('📊 Статус ответа от Multilogin API:', response.status)
-      
-      const responseText = await response.text()
-      console.log('📝 Ответ от API (первые 200 символов):', responseText.substring(0, 200))
-
-      if (!response.ok) {
-        console.log('❌ Multilogin API вернул ошибку')
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Ошибка от Multilogin API',
-          status: response.status,
-          message: responseText,
-          email: multiloginEmail
-        }), {
-          status: 200, // Возвращаем 200, чтобы клиент получил детали
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
-
-      let data
-      try {
-        data = JSON.parse(responseText)
-      } catch (e) {
-        console.log('❌ Не удалось распарсить JSON ответ')
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Неверный формат ответа от API',
-          raw_response: responseText
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
-
-      console.log('✅ Успешно получен ответ от Multilogin API')
-      
-      const token = data.token || data.access_token || data.authToken
-      
-      if (!token) {
-        console.log('❌ Токен не найден в ответе')
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Токен не найден в ответе',
-          available_fields: Object.keys(data),
-          response_data: data
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
-
-      console.log('🎉 Токен найден:', token.substring(0, 10) + '...')
-
-      // Сохраняем в базу
-      const expiresAt = new Date(Date.now() + (25 * 60 * 1000)) // 25 минут
-      
-      try {
-        // Деактивируем старые токены
-        await supabase
-          .from('multilogin_tokens')
-          .update({ is_active: false })
-          .eq('email', multiloginEmail)
-
-        // Сохраняем новый токен
-        const { error: insertError } = await supabase
-          .from('multilogin_tokens')
-          .insert({
-            email: multiloginEmail,
-            token: token,
-            expires_at: expiresAt.toISOString(),
-            is_active: true
-          })
-
-        if (insertError) {
-          console.log('❌ Ошибка сохранения в базу:', insertError)
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Ошибка сохранения токена',
-            token_received: true,
-            db_error: insertError.message
-          }), {
-            status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          })
-        }
-
-        console.log('💾 Токен сохранен в базу')
-
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Токен успешно получен и сохранен',
-          email: multiloginEmail,
-          token: token.substring(0, 10) + '...',
-          expires_at: expiresAt.toISOString()
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-
-      } catch (dbError) {
-        console.log('❌ Ошибка работы с базой:', dbError)
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Ошибка базы данных',
-          message: dbError.message
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
-
-    } catch (fetchError) {
-      console.log('❌ Ошибка HTTP запроса:', fetchError)
       return new Response(JSON.stringify({
-        success: false,
-        error: 'Ошибка соединения с Multilogin API',
-        message: fetchError.message
+        success: true,
+        message: 'Multilogin Token найден',
+        token: automationToken.substring(0, 10) + '...',
+        note: 'Используем automation token вместо локального API',
+        architecture: 'automation-token-based'
       }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
+
+    // Возвращаем объяснение архитектуры
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Неправильная архитектура интеграции',
+      explanation: {
+        problem: 'Multilogin работает через Local API (localhost:35000)',
+        current_approach: 'Edge Function пытается обратиться к удаленному API',
+        solutions: [
+          '1. Использовать MULTILOGIN_TOKEN (automation token)',
+          '2. Запустить automation-service локально у пользователя',
+          '3. Настроить proxy/tunnel к локальному Multilogin'
+        ]
+      },
+      multilogin_architecture: {
+        local_api: 'http://localhost:35000',
+        authentication: 'Через веб-интерфейс или CLI',
+        access: 'Только с той же машины где запущен Multilogin'
+      },
+      our_current_setup: {
+        edge_function: 'Работает в Supabase облаке',
+        cannot_access: 'localhost пользователя',
+        needs: 'automation token или локальный сервис'
+      }
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
 
   } catch (error) {
     console.error('💥 Критическая ошибка:', error)
