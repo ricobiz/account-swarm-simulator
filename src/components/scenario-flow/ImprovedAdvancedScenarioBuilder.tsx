@@ -360,14 +360,14 @@ const ImprovedAdvancedScenarioBuilderContent: React.FC<ImprovedAdvancedScenarioB
 
           {/* Мобильная панель управления */}
           {isMobile && (
-            <Panel position="top-center" className="space-y-2">
-              <div className="flex bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+            <Panel position="bottom-center" className="w-full">
+              <div className="flex justify-center items-center gap-2 bg-gray-800 rounded-lg border border-gray-700 p-2">
                 <button
                   onClick={() => {
                     setActiveTab('blocks');
                     setSidebarVisible(true);
                   }}
-                  className={`px-3 py-2 text-sm font-medium ${
+                  className={`px-3 py-2 text-xs font-medium rounded ${
                     activeTab === 'blocks' 
                       ? 'bg-blue-600 text-white' 
                       : 'text-gray-400 hover:text-white hover:bg-gray-700'
@@ -380,7 +380,7 @@ const ImprovedAdvancedScenarioBuilderContent: React.FC<ImprovedAdvancedScenarioB
                     setActiveTab('presets');
                     setSidebarVisible(true);
                   }}
-                  className={`px-3 py-2 text-sm font-medium ${
+                  className={`px-3 py-2 text-xs font-medium rounded ${
                     activeTab === 'presets' 
                       ? 'bg-blue-600 text-white' 
                       : 'text-gray-400 hover:text-white hover:bg-gray-700'
@@ -388,24 +388,36 @@ const ImprovedAdvancedScenarioBuilderContent: React.FC<ImprovedAdvancedScenarioB
                 >
                   Пресеты
                 </button>
+                <Button onClick={handleImportJSON} variant="ghost" size="sm" className="p-2">
+                  <Upload className="w-4 h-4" />
+                </Button>
+                <Button onClick={handleExportJSON} variant="ghost" size="sm" className="p-2">
+                  <Download className="w-4 h-4" />
+                </Button>
+                <Button onClick={handleSave} variant="ghost" size="sm" className="p-2">
+                  <Save className="w-4 h-4" />
+                </Button>
               </div>
             </Panel>
           )}
 
-          <Panel position="top-right" className="space-x-2">
-            <Button onClick={handleImportJSON} className="bg-purple-600 hover:bg-purple-700" size={isMobile ? "sm" : "default"}>
-              <Upload className="mr-2 h-4 w-4" />
-              {!isMobile && 'Импорт'}
-            </Button>
-            <Button onClick={handleExportJSON} className="bg-orange-600 hover:bg-orange-700" size={isMobile ? "sm" : "default"}>
-              <Download className="mr-2 h-4 w-4" />
-              {!isMobile && 'Экспорт'}
-            </Button>
-            <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700" size={isMobile ? "sm" : "default"}>
-              <Save className="mr-2 h-4 w-4" />
-              {!isMobile && 'Сохранить'}
-            </Button>
-          </Panel>
+          {/* Десктопная панель действий */}
+          {!isMobile && (
+            <Panel position="top-right" className="space-x-2">
+              <Button onClick={handleImportJSON} className="bg-purple-600 hover:bg-purple-700">
+                <Upload className="mr-2 h-4 w-4" />
+                Импорт
+              </Button>
+              <Button onClick={handleExportJSON} className="bg-orange-600 hover:bg-orange-700">
+                <Download className="mr-2 h-4 w-4" />
+                Экспорт
+              </Button>
+              <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">
+                <Save className="mr-2 h-4 w-4" />
+                Сохранить
+              </Button>
+            </Panel>
+          )}
         </ReactFlow>
 
         <input

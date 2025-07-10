@@ -194,93 +194,148 @@ export const VisualRPABuilder: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-900 p-6">
+    <div className="min-h-screen bg-gray-900 p-2 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Улучшенная навигация */}
-        <div className="mb-8 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              onClick={() => navigate('/')}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2 bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Назад
-            </Button>
+        {/* Адаптивная навигация для мобильных */}
+        <div className="mb-4 sm:mb-8">
+          {/* Мобильная версия навигации */}
+          <div className="block sm:hidden space-y-3">
+            <div className="flex items-center justify-between">
+              <Button
+                onClick={() => navigate('/')}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Назад
+              </Button>
+              
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => navigate('/accounts')}
+                  variant="outline"
+                  size="sm"
+                  className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+                <Button
+                  onClick={() => navigate('/')}
+                  variant="outline"
+                  size="sm"
+                  className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
+                >
+                  <Home className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
             
-            <div>
-              <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-                <Bot className="h-8 w-8 text-purple-400" />
-                Визуальный RPA Конструктор
+            <div className="text-center">
+              <h1 className="text-xl font-bold text-white flex items-center justify-center gap-2">
+                <Bot className="h-6 w-6 text-purple-400" />
+                RPA Конструктор
               </h1>
-              <p className="text-gray-400 mt-2">
-                Создавайте автоматизированные сценарии с помощью визуального конструктора
+              <p className="text-gray-400 mt-1 text-sm">
+                Создавайте автоматизированные сценарии
               </p>
             </div>
           </div>
 
-          {/* Дополнительные кнопки навигации */}
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => navigate('/accounts')}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2 bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
-            >
-              <Settings className="h-4 w-4" />
-              Аккаунты
-            </Button>
-            <Button
-              onClick={() => navigate('/')}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2 bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
-            >
-              <Home className="h-4 w-4" />
-              Главная
-            </Button>
+          {/* Десктопная версия навигации */}
+          <div className="hidden sm:flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={() => navigate('/')}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Назад
+              </Button>
+              
+              <div>
+                <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+                  <Bot className="h-8 w-8 text-purple-400" />
+                  Визуальный RPA Конструктор
+                </h1>
+                <p className="text-gray-400 mt-2">
+                  Создавайте автоматизированные сценарии с помощью визуального конструктора
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => navigate('/accounts')}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
+              >
+                <Settings className="h-4 w-4" />
+                Аккаунты
+              </Button>
+              <Button
+                onClick={() => navigate('/')}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
+              >
+                <Home className="h-4 w-4" />
+                Главная
+              </Button>
+            </div>
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 bg-gray-800">
-            <TabsTrigger value="constructor" className="flex items-center gap-2">
-              <Workflow className="h-4 w-4" />
-              Конструктор
-            </TabsTrigger>
-            <TabsTrigger value="recorder" className="flex items-center gap-2">
-              <Server className="h-4 w-4" />
-              Рекордер
-            </TabsTrigger>
-            <TabsTrigger value="scenarios" className="flex items-center gap-2">
-              <Database className="h-4 w-4" />
-              Сценарии
-            </TabsTrigger>
-            <TabsTrigger value="executor" className="flex items-center gap-2">
-              <Play className="h-4 w-4" />
-              Выполнение
-            </TabsTrigger>
-            <TabsTrigger value="testing" className="flex items-center gap-2">
-              <TestTube className="h-4 w-4" />
-              Тестирование
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Настройки
-            </TabsTrigger>
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+          {/* Адаптивные табы */}
+          <div className="overflow-x-auto">
+            <TabsList className="grid grid-cols-6 bg-gray-800 min-w-max sm:min-w-0 w-full sm:w-auto">
+              <TabsTrigger value="constructor" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+                <Workflow className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Конструктор</span>
+                <span className="sm:hidden">Блоки</span>
+              </TabsTrigger>
+              <TabsTrigger value="recorder" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+                <Server className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Рекордер</span>
+                <span className="sm:hidden">Зап.</span>
+              </TabsTrigger>
+              <TabsTrigger value="scenarios" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+                <Database className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Сценарии</span>
+                <span className="sm:hidden">Сцен.</span>
+              </TabsTrigger>
+              <TabsTrigger value="executor" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+                <Play className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Выполнение</span>
+                <span className="sm:hidden">Играть</span>
+              </TabsTrigger>
+              <TabsTrigger value="testing" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+                <TestTube className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Тестирование</span>
+                <span className="sm:hidden">Тест</span>
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+                <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Настройки</span>
+                <span className="sm:hidden">Наст.</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="constructor">
             <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <div className="flex items-center justify-between">
+              <CardHeader className="pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                     <CardTitle className="text-white flex items-center gap-2">
                       <Workflow className="h-5 w-5 text-blue-400" />
                       Визуальный конструктор сценариев
                     </CardTitle>
-                    <p className="text-gray-400 mt-2">
+                    <p className="text-gray-400 mt-2 text-sm sm:text-base">
                       Перетаскивайте блоки и соединяйте их для создания сценариев автоматизации
                     </p>
                   </div>
@@ -288,15 +343,16 @@ export const VisualRPABuilder: React.FC = () => {
                     onClick={() => navigate('/')}
                     variant="ghost"
                     size="sm"
-                    className="text-gray-400 hover:text-white"
+                    className="text-gray-400 hover:text-white self-start sm:self-center"
                   >
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    Вернуться в меню
+                    <span className="hidden sm:inline">Вернуться в меню</span>
+                    <span className="sm:hidden">Меню</span>
                   </Button>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="h-[800px]">
+                <div className="h-[400px] sm:h-[600px] lg:h-[800px]">
                   <ImprovedAdvancedScenarioBuilder onSave={handleSaveFromConstructor} />
                 </div>
               </CardContent>
@@ -381,13 +437,13 @@ export const VisualRPABuilder: React.FC = () => {
                 </Button>
               </div>
               
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                 <TestRPAButton />
                 <MultiloginTestButton />
                 <MultiloginTokenStatus />
               </div>
               
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
                 <MultiloginStatusCard />
               </div>
               
