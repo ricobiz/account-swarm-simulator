@@ -24,7 +24,7 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | \
     rm -rf /var/lib/apt/lists/*
 
 # Копируем файлы requirements сначала для кэширования слоев
-COPY ./rpa-bot-cloud/requirements_multilogin.txt /app/requirements_multilogin.txt
+COPY rpa-bot-cloud/requirements_multilogin.txt /app/requirements_multilogin.txt
 
 # Устанавливаем зависимости
 RUN pip install --upgrade pip setuptools wheel && \
@@ -35,11 +35,11 @@ RUN mkdir -p /app/logs /app/screenshots && \
     chmod -R 755 /app
 
 # Копируем файлы приложения по одному для большей надежности
-COPY ./rpa-bot-cloud/multilogin_enhanced.py /app/
-COPY ./rpa-bot-cloud/rpa_bot_multilogin.py /app/
-COPY ./rpa-bot-cloud/config.py /app/
-COPY ./rpa-bot-cloud/multilogin_integration.py /app/
-COPY ./rpa-bot-cloud/.env.railway /app/.env
+COPY rpa-bot-cloud/multilogin_enhanced.py /app/
+COPY rpa-bot-cloud/rpa_bot_multilogin.py /app/
+COPY rpa-bot-cloud/config.py /app/
+COPY rpa-bot-cloud/multilogin_integration.py /app/
+COPY rpa-bot-cloud/.env.railway /app/.env
 
 # Переменные окружения
 ENV PYTHONUNBUFFERED=1
