@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { MultiloginAuthTester } from '@/components/MultiloginAuthTester';
+import { MultiloginProfileManager } from '@/components/MultiloginProfileManager';
 
 interface TestResult {
   success: boolean;
@@ -211,6 +212,9 @@ export default function TestFunctionality() {
 
       {/* Основное тестирование Multilogin API */}
       <MultiloginAuthTester />
+
+      {/* Управление профилями Multilogin */}
+      <MultiloginProfileManager />
 
       <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
         {/* Тест создания профиля */}

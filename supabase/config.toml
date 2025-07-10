@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.check-multilogin-secrets]
 verify_jwt = false
+
+[functions.multilogin-profiles]
+verify_jwt = false
