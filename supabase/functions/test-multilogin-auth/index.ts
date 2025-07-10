@@ -29,10 +29,10 @@ serve(async (req) => {
     
     const testResults = []
     
-    // Вариант 1: Старый API
+    // Вариант 1: Правильный launcher API endpoint  
     try {
-      console.log('📡 Тест 1: api.multilogin.com/user/signin')
-      const response1 = await fetch('https://api.multilogin.com/user/signin', {
+      console.log('📡 Тест 1: launcher-api.multilogin.com/api/v1/signin')
+      const response1 = await fetch('https://launcher-api.multilogin.com/api/v1/signin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -45,7 +45,7 @@ serve(async (req) => {
       })
       
       const result1 = {
-        endpoint: 'api.multilogin.com/user/signin',
+        endpoint: 'launcher-api.multilogin.com/api/v1/signin',
         status: response1.status,
         ok: response1.ok,
         response: await response1.text()
@@ -56,15 +56,15 @@ serve(async (req) => {
       
     } catch (error) {
       testResults.push({
-        endpoint: 'api.multilogin.com/user/signin',
+        endpoint: 'launcher-api.multilogin.com/api/v1/signin',
         error: error.message
       })
     }
     
-    // Вариант 2: Возможный новый API
+    // Вариант 2: accounts-api
     try {
-      console.log('📡 Тест 2: api.multilogin.com/auth/login')
-      const response2 = await fetch('https://api.multilogin.com/auth/login', {
+      console.log('📡 Тест 2: accounts-api.multilogin.com/api/v1/signin')
+      const response2 = await fetch('https://accounts-api.multilogin.com/api/v1/signin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -77,7 +77,7 @@ serve(async (req) => {
       })
       
       const result2 = {
-        endpoint: 'api.multilogin.com/auth/login',
+        endpoint: 'accounts-api.multilogin.com/api/v1/signin',
         status: response2.status,
         ok: response2.ok,
         response: await response2.text()
@@ -88,15 +88,15 @@ serve(async (req) => {
       
     } catch (error) {
       testResults.push({
-        endpoint: 'api.multilogin.com/auth/login',
+        endpoint: 'accounts-api.multilogin.com/api/v1/signin',
         error: error.message
       })
     }
     
-    // Вариант 3: Возможно X API
+    // Вариант 3: старый api.multilogin.com
     try {
-      console.log('📡 Тест 3: api.multilogin.com/v1/auth')
-      const response3 = await fetch('https://api.multilogin.com/v1/auth', {
+      console.log('📡 Тест 3: api.multilogin.com/user/signin')
+      const response3 = await fetch('https://api.multilogin.com/user/signin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -109,7 +109,7 @@ serve(async (req) => {
       })
       
       const result3 = {
-        endpoint: 'api.multilogin.com/v1/auth',
+        endpoint: 'api.multilogin.com/user/signin',
         status: response3.status,
         ok: response3.ok,
         response: await response3.text()
@@ -120,28 +120,28 @@ serve(async (req) => {
       
     } catch (error) {
       testResults.push({
-        endpoint: 'api.multilogin.com/v1/auth',
+        endpoint: 'api.multilogin.com/user/signin',
         error: error.message
       })
     }
     
-    // Вариант 4: Может быть разные форматы данных
+    // Вариант 4: Прямой API для токена 
     try {
-      console.log('📡 Тест 4: api.multilogin.com/user/signin с username')
-      const response4 = await fetch('https://api.multilogin.com/user/signin', {
+      console.log('📡 Тест 4: api.multilogin.com/user/auth')
+      const response4 = await fetch('https://api.multilogin.com/user/auth', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          username: email,
+          email: email,
           password: password
         })
       })
       
       const result4 = {
-        endpoint: 'api.multilogin.com/user/signin (username field)',
+        endpoint: 'api.multilogin.com/user/auth',
         status: response4.status,
         ok: response4.ok,
         response: await response4.text()
@@ -152,7 +152,7 @@ serve(async (req) => {
       
     } catch (error) {
       testResults.push({
-        endpoint: 'api.multilogin.com/user/signin (username field)',
+        endpoint: 'api.multilogin.com/user/auth',
         error: error.message
       })
     }
