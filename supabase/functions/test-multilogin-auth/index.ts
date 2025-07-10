@@ -93,9 +93,9 @@ serve(async (req) => {
       })
     }
     
-    // Вариант 3: старый api.multilogin.com
+    // Вариант 3: Попробуем разные форматы для api.multilogin.com/user/signin
     try {
-      console.log('📡 Тест 3: api.multilogin.com/user/signin')
+      console.log('📡 Тест 3: api.multilogin.com/user/signin (стандартный формат)')
       const response3 = await fetch('https://api.multilogin.com/user/signin', {
         method: 'POST',
         headers: {
@@ -109,7 +109,7 @@ serve(async (req) => {
       })
       
       const result3 = {
-        endpoint: 'api.multilogin.com/user/signin',
+        endpoint: 'api.multilogin.com/user/signin (стандартный)',
         status: response3.status,
         ok: response3.ok,
         response: await response3.text()
@@ -120,7 +120,75 @@ serve(async (req) => {
       
     } catch (error) {
       testResults.push({
-        endpoint: 'api.multilogin.com/user/signin',
+        endpoint: 'api.multilogin.com/user/signin (стандартный)',
+        error: error.message
+      })
+    }
+    
+    // Вариант 3b: Попробуем с дополнительными полями
+    try {
+      console.log('📡 Тест 3b: api.multilogin.com/user/signin (с дополнительными полями)')
+      const response3b = await fetch('https://api.multilogin.com/user/signin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': 'MultiloginAPI/1.0'
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+          version: "6.0",
+          os: "windows"
+        })
+      })
+      
+      const result3b = {
+        endpoint: 'api.multilogin.com/user/signin (расширенный)',
+        status: response3b.status,
+        ok: response3b.ok,
+        response: await response3b.text()
+      }
+      
+      testResults.push(result3b)
+      console.log('📊 Результат 3b:', result3b)
+      
+    } catch (error) {
+      testResults.push({
+        endpoint: 'api.multilogin.com/user/signin (расширенный)',
+        error: error.message
+      })
+    }
+    
+    // Вариант 3c: Попробуем POST form data
+    try {
+      console.log('📡 Тест 3c: api.multilogin.com/user/signin (form data)')
+      const formData = new URLSearchParams()
+      formData.append('email', email)
+      formData.append('password', password)
+      
+      const response3c = await fetch('https://api.multilogin.com/user/signin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json'
+        },
+        body: formData
+      })
+      
+      const result3c = {
+        endpoint: 'api.multilogin.com/user/signin (form data)',
+        status: response3c.status,
+        ok: response3c.ok,
+        response: await response3c.text()
+      }
+      
+      testResults.push(result3c)
+      console.log('📊 Результат 3c:', result3c)
+      
+    } catch (error) {
+      testResults.push({
+        endpoint: 'api.multilogin.com/user/signin (form data)',
         error: error.message
       })
     }
