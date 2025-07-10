@@ -75,6 +75,8 @@ export const MultiloginTokenStatus: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  console.log('🔍 MultiloginTokenStatus: loading =', loading, 'tokenStatus =', tokenStatus);
+
   return (
     <Card className="bg-gray-800 border-gray-700">
       <CardHeader>
