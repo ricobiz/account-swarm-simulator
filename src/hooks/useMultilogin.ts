@@ -244,18 +244,32 @@ export const useMultilogin = () => {
   // Новая функция для получения статуса токенов
   const getTokenStatus = async (): Promise<{ hasToken: boolean; isExpired?: boolean; message?: string }> => {
     try {
-      const { data, error } = await supabase.functions.invoke('multilogin-token-manager');
+      // Получаем активный токен из базы данных
+      const { data, error } = await supabase
+        .from('multilogin_tokens')
+        .select('token, expires_at')
+        .eq('is_active', true)
+        .maybeSingle();
       
       if (error) {
-        return { hasToken: false, message: 'Нет активного токена' };
+        console.error('Error checking token status:', error);
+        return { hasToken: false, message: 'Ошибка проверки токена' };
       }
+
+      if (!data) {
+        return { hasToken: false, message: 'Токен не найден в базе данных' };
+      }
+
+      const isExpired = new Date() > new Date(data.expires_at);
       
       return { 
-        hasToken: data?.success || false, 
-        message: data?.message || 'Статус токена неизвестен'
+        hasToken: true,
+        isExpired,
+        message: isExpired ? 'Токен истек, требуется обновление' : 'Токен активен'
       };
     } catch (error) {
-      return { hasToken: false, message: 'Ошибка проверки токена' };
+      console.error('Error in getTokenStatus:', error);
+      return { hasToken: false, message: 'Ошибка подключения' };
     }
   };
 
