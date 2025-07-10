@@ -11,6 +11,7 @@ import { ScenarioManager } from './ScenarioManager';
 import { ImprovedAdvancedScenarioBuilder } from '../scenario-flow/ImprovedAdvancedScenarioBuilder';
 import { TestRPAButton } from '../TestRPAButton';
 import { MultiloginTestButton } from '../MultiloginTestButton';
+import { MultiloginStatusCard } from '../MultiloginStatusCard';
 import { 
   Bot, 
   Settings, 
@@ -379,9 +380,10 @@ export const VisualRPABuilder: React.FC = () => {
                 </Button>
               </div>
               
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 <TestRPAButton />
                 <MultiloginTestButton />
+                <MultiloginStatusCard />
               </div>
               
               <Card className="bg-gray-800/50 border-gray-700">
