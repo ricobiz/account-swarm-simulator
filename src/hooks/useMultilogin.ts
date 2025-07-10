@@ -244,6 +244,8 @@ export const useMultilogin = () => {
   // Новая функция для получения статуса токенов
   const getTokenStatus = async (): Promise<{ hasToken: boolean; isExpired?: boolean; message?: string }> => {
     try {
+      console.log('🔍 Проверяем статус токена в базе данных...');
+      
       // Получаем активный токен из базы данных
       const { data, error } = await supabase
         .from('multilogin_tokens')
@@ -254,15 +256,23 @@ export const useMultilogin = () => {
         .maybeSingle();
       
       if (error) {
-        console.error('Error checking token status:', error);
+        console.error('❌ Ошибка проверки токена:', error);
         return { hasToken: false, message: 'Ошибка проверки токена' };
       }
 
       if (!data) {
+        console.log('❌ Токен не найден в базе данных');
         return { hasToken: false, message: 'Токен не найден в базе данных' };
       }
 
-      const isExpired = new Date() > new Date(data.expires_at);
+      const now = new Date();
+      const expiresAt = new Date(data.expires_at);
+      const isExpired = now > expiresAt;
+      
+      console.log('📊 Информация о токене:');
+      console.log('  - Текущее время:', now.toISOString());
+      console.log('  - Токен истекает:', expiresAt.toISOString());
+      console.log('  - Токен истек?', isExpired);
       
       return { 
         hasToken: true,
@@ -270,7 +280,7 @@ export const useMultilogin = () => {
         message: isExpired ? 'Токен истек, требуется обновление' : 'Токен активен'
       };
     } catch (error) {
-      console.error('Error in getTokenStatus:', error);
+      console.error('❌ Ошибка в getTokenStatus:', error);
       return { hasToken: false, message: 'Ошибка подключения' };
     }
   };

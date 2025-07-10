@@ -39,9 +39,16 @@ export const MultiloginTokenStatus: React.FC = () => {
   const handleRefreshToken = async () => {
     setLoading(true);
     try {
+      console.log('🔄 Начинаем обновление токена...');
       const success = await refreshToken();
+      console.log('🔄 Результат обновления токена:', success);
+      
       if (success) {
-        await checkTokenStatus();
+        console.log('✅ Токен обновлен, ждем 1 секунду и проверяем статус...');
+        // Небольшая задержка чтобы база данных успела обновиться
+        setTimeout(async () => {
+          await checkTokenStatus();
+        }, 1000);
       }
     } finally {
       setLoading(false);
