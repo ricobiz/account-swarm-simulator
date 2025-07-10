@@ -24,12 +24,14 @@ export const MultiloginProfileManager = () => {
     setLoading(prev => ({ ...prev, [loadingKey]: true }))
     
     try {
-      console.log(`🔄 Выполняем ${action}...`)
+      console.log(`🔄 Выполняем ${action}...`, { action, data: data || newProfile })
       
       const { data: result, error } = await supabase.functions.invoke('multilogin-profiles', {
         body: { action, profileData: data || newProfile },
         headers: { 'Content-Type': 'application/json' }
       })
+      
+      console.log('📤 Ответ от функции:', { result, error })
       
       if (error) throw error
       

@@ -43,6 +43,7 @@ serve(async (req) => {
         result = await listProfiles(token)
         break
       default:
+        console.error('❌ Неизвестное действие:', action)
         throw new Error(`Неизвестное действие: ${action}`)
     }
 
