@@ -1,4 +1,4 @@
-# Railway Dockerfile для Account Swarm Simulator
+# Railway Dockerfile для базового RPA бота
 FROM python:3.11-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -23,23 +23,19 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | \
     apt-get update && apt-get install -y google-chrome-stable && \
     rm -rf /var/lib/apt/lists/*
 
-# Копируем файлы requirements сначала для кэширования слоев
-COPY rpa-bot-cloud/requirements_multilogin.txt /app/requirements_multilogin.txt
+# Копируем файл requirements
+COPY rpa-bot-cloud/requirements.txt /app/requirements.txt
 
 # Устанавливаем зависимости
 RUN pip install --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements_multilogin.txt
+    pip install --no-cache-dir -r requirements.txt
 
 # Создаем необходимые директории
 RUN mkdir -p /app/logs /app/screenshots && \
     chmod -R 755 /app
 
-# Копируем файлы приложения по одному для большей надежности
-COPY rpa-bot-cloud/multilogin_enhanced.py /app/
-COPY rpa-bot-cloud/rpa_bot_multilogin.py /app/
-COPY rpa-bot-cloud/config.py /app/
-COPY rpa-bot-cloud/multilogin_integration.py /app/
-COPY rpa-bot-cloud/.env.railway /app/.env
+# Копируем основной файл RPA бота
+COPY rpa-bot-cloud/rpa_bot_cloud.py /app/rpa_bot_cloud.py
 
 # Переменные окружения
 ENV PYTHONUNBUFFERED=1
@@ -48,6 +44,6 @@ ENV PYTHONPATH=/app
 
 EXPOSE 8080
 
-# Запуск RPA бота с Multilogin
-CMD ["gunicorn", "-b", "0.0.0.0:8080", "rpa_bot_multilogin:app"]
+# Запуск базового RPA бота
+CMD ["gunicorn", "-b", "0.0.0.0:8080", "rpa_bot_cloud:app"]
 
