@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Тест реальной функциональности RPA</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .button { background: #007bff; color: white; border: none; padding: 10px 20px; margin: 5px; cursor: pointer; border-radius: 3px; }
+        .button:hover { background: #0056b3; }
+        .result { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 3px; }
+        .success { border-left: 5px solid #28a745; }
+        .error { border-left: 5px solid #dc3545; }
+        .logs { font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; background: #1e1e1e; color: #fff; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Тест реальной функциональности RPA</h1>
+    
+    <div class="test-section">
+        <h3>1. Тест получения Multilogin токенов</h3>
+        <button class="button" onclick="testMultiloginTokens()">Получить токены Multilogin</button>
+        <div id="multilogin-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>2. Тест создания Multilogin профиля</h3>
+        <button class="button" onclick="testMultiloginProfile()">Создать профиль</button>
+        <div id="profile-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>3. Тест выполнения RPA задачи</h3>
+        <button class="button" onclick="testRPATask()">Выполнить RPA задачу</button>
+        <div id="rpa-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>4. Логи</h3>
+        <div id="logs" class="logs"></div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://izmgzstdgoswlozinmyk.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6bWd6c3RkZ29zd2xvemlubXlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxNTk3NzksImV4cCI6MjA2NTczNTc3OX0.5BEISZmOjbbnBCPlqVyvuHiEDf9NOhaHh33U07UNzVU';
+
+        function log(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'color: #ff6b6b' : type === 'success' ? 'color: #51cf66' : 'color: #74c0fc';
+            logs.innerHTML += `<div style="${className}">[${timestamp}] ${message}</div>`;
+            logs.scrollTop = logs.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        async function callSupabaseFunction(functionName, body = {}) {
+            try {
+                log(`🚀 Вызов функции ${functionName}...`);
+                
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                const responseText = await response.text();
+                log(`📡 Ответ ${functionName}: ${response.status} ${response.statusText}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${responseText}`);
+                }
+
+                const result = JSON.parse(responseText);
+                log(`✅ Результат ${functionName}: ${JSON.stringify(result, null, 2)}`, 'success');
+                return result;
+                
+            } catch (error) {
+                log(`❌ Ошибка ${functionName}: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        async function testMultiloginTokens() {
+            const resultDiv = document.getElementById('multilogin-result');
+            try {
+                resultDiv.innerHTML = '<div>⏳ Получение токенов...</div>';
+                
+                const result = await callSupabaseFunction('multilogin-token-manager', {});
+                
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <strong>✅ Токены получены успешно!</strong><br>
+                        <small>Email: ${result.email || 'N/A'}</small><br>
+                        <small>Токен: ${result.token ? result.token.substring(0, 20) + '...' : 'N/A'}</small><br>
+                        <small>Истекает: ${result.expires_at || 'N/A'}</small>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error"><strong>❌ Ошибка:</strong> ${error.message}</div>`;
+            }
+        }
+
+        async function testMultiloginProfile() {
+            const resultDiv = document.getElementById('profile-result');
+            try {
+                resultDiv.innerHTML = '<div>⏳ Создание профиля...</div>';
+                
+                const result = await callSupabaseFunction('multilogin-api', {
+                    platform: 'instagram',
+                    username: 'test_user_' + Date.now(),
+                    password: 'test_password'
+                });
+                
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <strong>✅ Профиль создан!</strong><br>
+                        <small>ID профиля: ${result.profile_id || 'N/A'}</small><br>
+                        <small>Статус: ${result.success ? 'Успешно' : 'Ошибка'}</small>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error"><strong>❌ Ошибка:</strong> ${error.message}</div>`;
+            }
+        }
+
+        async function testRPATask() {
+            const resultDiv = document.getElementById('rpa-result');
+            try {
+                resultDiv.innerHTML = '<div>⏳ Выполнение RPA задачи...</div>';
+                
+                const taskId = 'test_' + Date.now();
+                const task = {
+                    taskId: taskId,
+                    url: 'https://httpbin.org/get',
+                    actions: [
+                        { type: 'navigate', url: 'https://httpbin.org/get' },
+                        { type: 'wait', duration: 2000 },
+                        { type: 'screenshot' }
+                    ],
+                    metadata: {
+                        platform: 'test',
+                        account: { username: 'test_user' }
+                    },
+                    timeout: 30
+                };
+                
+                const result = await callSupabaseFunction('rpa-task', { task });
+                
+                resultDiv.innerHTML = `
+                    <div class="${result.success ? 'success' : 'error'}">
+                        <strong>${result.success ? '✅' : '❌'} RPA задача ${result.success ? 'выполнена' : 'провалена'}!</strong><br>
+                        <small>Task ID: ${result.taskId || 'N/A'}</small><br>
+                        <small>Сообщение: ${result.result?.message || result.message || 'N/A'}</small><br>
+                        <small>Время выполнения: ${result.result?.executionTime || 0}мс</small>
+                        ${result.result?.data?.screenshot_urls ? `<br><small>Скриншоты: ${result.result.data.screenshot_urls.length}</small>` : ''}
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error"><strong>❌ Ошибка:</strong> ${error.message}</div>`;
+            }
+        }
+
+        // Автозапуск логирования
+        log('🎯 Система тестирования запущена');
+        log('📋 Готова к тестированию реальной функциональности');
+    </script>
+</body>
+</html>
