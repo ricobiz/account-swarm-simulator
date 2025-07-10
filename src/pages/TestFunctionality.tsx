@@ -166,6 +166,36 @@ export default function TestFunctionality() {
     }
   };
 
+  const testSimpleMultilogin = async () => {
+    setLoading(prev => ({ ...prev, simple: true }));
+    try {
+      log('🧪 Тестирование упрощенной Multilogin функции...');
+      
+      const { data, error } = await supabase.functions.invoke('multilogin-simple', {
+        body: {}
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      log(`✅ Упрощенный тест завершен: ${JSON.stringify(data, null, 2)}`, 'success');
+      setMultiloginResult({
+        success: data.success,
+        message: data.success ? 'Упрощенная функция работает!' : data.error,
+        data: data
+      });
+    } catch (error: any) {
+      log(`❌ Ошибка упрощенной функции: ${error.message}`, 'error');
+      setMultiloginResult({
+        success: false,
+        message: error.message
+      });
+    } finally {
+      setLoading(prev => ({ ...prev, simple: false }));
+    }
+  };
+
   React.useEffect(() => {
     log('🎯 Система тестирования запущена');
     log('📋 Готова к тестированию реальной функциональности');
@@ -228,6 +258,13 @@ export default function TestFunctionality() {
               className="w-full"
             >
               {loading.multilogin ? 'Получение...' : 'Получить токены'}
+            </Button>
+            <Button 
+              onClick={testSimpleMultilogin}
+              disabled={loading.simple}
+              className="w-full bg-blue-600 hover:bg-blue-700"
+            >
+              {loading.simple ? 'Тест...' : '🧪 Простой тест'}
             </Button>
             {multiloginResult && (
               <div className={`p-3 rounded ${multiloginResult.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
