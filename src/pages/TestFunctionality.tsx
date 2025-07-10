@@ -16,6 +16,7 @@ interface TestResult {
 }
 
 export default function TestFunctionality() {
+  const [tokenResult, setTokenResult] = useState<TestResult | null>(null);
   const [rpaResult, setRpaResult] = useState<TestResult | null>(null);
   const [secretsResult, setSecretsResult] = useState<TestResult | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
@@ -26,6 +27,36 @@ export default function TestFunctionality() {
     const logMessage = `[${timestamp}] ${message}`;
     setLogs(prev => [...prev, logMessage]);
     console.log(`[${type.toUpperCase()}] ${message}`);
+  };
+
+  const testMultiloginTokens = async () => {
+    setLoading(prev => ({ ...prev, tokens: true }));
+    try {
+      log('🚀 Тестирование получения токенов Multilogin...');
+      
+      const { data, error } = await supabase.functions.invoke('multilogin-token-manager', {
+        body: {}
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      log(`✅ Токены получены: ${JSON.stringify(data, null, 2)}`, 'success');
+      setTokenResult({
+        success: true,
+        message: 'Токены получены успешно!',
+        data: data
+      });
+    } catch (error: any) {
+      log(`❌ Ошибка получения токенов: ${error.message}`, 'error');
+      setTokenResult({
+        success: false,
+        message: error.message
+      });
+    } finally {
+      setLoading(prev => ({ ...prev, tokens: false }));
+    }
   };
 
   const testRPATask = async () => {
@@ -142,7 +173,52 @@ export default function TestFunctionality() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <MultiloginTokenStatus />
+                <div className="space-y-4">
+                  <MultiloginTokenStatus />
+                  
+                  <div className="border-t pt-4">
+                    <Button 
+                      onClick={testMultiloginTokens}
+                      disabled={loading.tokens}
+                      className="w-full"
+                      variant="outline"
+                    >
+                      {loading.tokens ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                          Тестирование токенов...
+                        </div>
+                      ) : (
+                        '🔍 Ручное тестирование токенов'
+                      )}
+                    </Button>
+
+                    {tokenResult && (
+                      <div className={`mt-4 p-4 rounded-lg border ${
+                        tokenResult.success 
+                          ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' 
+                          : 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800'
+                      }`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant={tokenResult.success ? 'default' : 'destructive'}>
+                            {tokenResult.success ? '✅ Успешно' : '❌ Ошибка'}
+                          </Badge>
+                        </div>
+                        <p className="text-sm font-medium">{tokenResult.message}</p>
+                        {tokenResult.data && (
+                          <details className="mt-3">
+                            <summary className="text-xs cursor-pointer text-muted-foreground">
+                              Показать детали ответа
+                            </summary>
+                            <pre className="text-xs bg-muted p-2 rounded mt-2 overflow-auto">
+                              {JSON.stringify(tokenResult.data, null, 2)}
+                            </pre>
+                          </details>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
