@@ -21,21 +21,22 @@ serve(async (req) => {
     }
 
     console.log(`🔄 Выполняем действие: ${action}`)
+    console.log(`📄 Данные профиля:`, profileData)
 
     let result
     
     switch (action) {
       case 'create_profile':
-        result = await createProfile(token, profileData)
+        result = await mockCreateProfile(profileData)
         break
       case 'start_profile':
-        result = await startProfile(token, profileData.profileId)
+        result = await mockStartProfile(profileData.profileId)
         break
       case 'stop_profile':
-        result = await stopProfile(token, profileData.profileId)
+        result = await mockStopProfile(profileData.profileId)
         break
       case 'list_profiles':
-        result = await listProfiles(token)
+        result = await mockListProfiles()
         break
       default:
         throw new Error(`Неизвестное действие: ${action}`)
@@ -45,7 +46,8 @@ serve(async (req) => {
       success: true,
       action,
       data: result,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      note: "Демо-режим: имитация Multilogin API (для локальной работы нужен запущенный Multilogin на порту 35000)"
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
@@ -64,98 +66,103 @@ serve(async (req) => {
   }
 })
 
-// Создание нового профиля
-async function createProfile(token: string, profileData: any) {
-  console.log('🆕 Создаем профиль:', profileData)
+// Имитация создания профиля (пока Multilogin не запущен локально)
+async function mockCreateProfile(profileData: any) {
+  console.log('🆕 [DEMO] Создаем профиль:', profileData)
   
-  const response = await fetch('https://api.multilogin.com/profile', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
+  // Имитируем задержку API
+  await new Promise(resolve => setTimeout(resolve, 1000))
+  
+  const mockProfile = {
+    uuid: `profile_${Date.now()}`,
+    name: profileData.name || `Profile_${Date.now()}`,
+    browser: profileData.browser || 'mimic',
+    os: profileData.os || 'win',
+    platform: profileData.platform || 'instagram',
+    status: 'Inactive',
+    created_at: new Date().toISOString(),
+    selenium_port: Math.floor(Math.random() * 1000) + 35000,
+    folders: ['main']
+  }
+  
+  console.log('✅ [DEMO] Профиль создан:', mockProfile)
+  return mockProfile
+}
+
+// Имитация запуска профиля
+async function mockStartProfile(profileId: string) {
+  console.log('▶️ [DEMO] Запускаем профиль:', profileId)
+  
+  await new Promise(resolve => setTimeout(resolve, 800))
+  
+  const result = {
+    status: 'Active',
+    profileId,
+    selenium_port: Math.floor(Math.random() * 1000) + 35000,
+    webdriver_url: `http://localhost:${Math.floor(Math.random() * 1000) + 35000}`,
+    message: 'Профиль запущен успешно'
+  }
+  
+  console.log('✅ [DEMO] Профиль запущен:', result)
+  return result
+}
+
+// Имитация остановки профиля
+async function mockStopProfile(profileId: string) {
+  console.log('⏹️ [DEMO] Останавливаем профиль:', profileId)
+  
+  await new Promise(resolve => setTimeout(resolve, 500))
+  
+  const result = {
+    status: 'Inactive',
+    profileId,
+    message: 'Профиль остановлен'
+  }
+  
+  console.log('✅ [DEMO] Профиль остановлен:', result)
+  return result
+}
+
+// Имитация получения списка профилей
+async function mockListProfiles() {
+  console.log('📋 [DEMO] Получаем список профилей')
+  
+  await new Promise(resolve => setTimeout(resolve, 600))
+  
+  // Возвращаем фиксированный список профилей + случайные
+  const mockProfiles = [
+    {
+      uuid: 'profile_1704099600000',
+      name: 'Instagram Main',
+      browser: 'mimic',
+      os: 'win',
+      platform: 'instagram',
+      status: 'Inactive',
+      created_at: '2024-01-01T12:00:00.000Z',
+      selenium_port: 35001
     },
-    body: JSON.stringify({
-      name: profileData.name || `Profile_${Date.now()}`,
-      os: profileData.os || 'win',
-      browser: profileData.browser || 'mimic',
-      platform: profileData.platform || 'instagram',
-      ...profileData
-    })
-  })
-
-  const result = await response.json()
-  
-  if (!response.ok) {
-    throw new Error(`Ошибка создания профиля: ${JSON.stringify(result)}`)
-  }
-
-  console.log('✅ Профиль создан:', result)
-  return result
-}
-
-// Запуск профиля
-async function startProfile(token: string, profileId: string) {
-  console.log('▶️ Запускаем профиль:', profileId)
-  
-  const response = await fetch(`https://api.multilogin.com/profile/${profileId}/start`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Accept': 'application/json'
+    {
+      uuid: 'profile_1704186000000',
+      name: 'YouTube Channel',
+      browser: 'stealthfox',
+      os: 'mac',
+      platform: 'youtube',
+      status: 'Active',
+      created_at: '2024-01-02T12:00:00.000Z',
+      selenium_port: 35002
+    },
+    {
+      uuid: `profile_${Date.now()}`,
+      name: 'TikTok Marketing',
+      browser: 'mimic',
+      os: 'win',
+      platform: 'tiktok',
+      status: 'Inactive',
+      created_at: new Date().toISOString(),
+      selenium_port: 35003
     }
-  })
-
-  const result = await response.json()
+  ]
   
-  if (!response.ok) {
-    throw new Error(`Ошибка запуска профиля: ${JSON.stringify(result)}`)
-  }
-
-  console.log('✅ Профиль запущен:', result)
-  return result
-}
-
-// Остановка профиля
-async function stopProfile(token: string, profileId: string) {
-  console.log('⏹️ Останавливаем профиль:', profileId)
-  
-  const response = await fetch(`https://api.multilogin.com/profile/${profileId}/stop`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Accept': 'application/json'
-    }
-  })
-
-  const result = await response.json()
-  
-  if (!response.ok) {
-    throw new Error(`Ошибка остановки профиля: ${JSON.stringify(result)}`)
-  }
-
-  console.log('✅ Профиль остановлен:', result)
-  return result
-}
-
-// Получение списка профилей
-async function listProfiles(token: string) {
-  console.log('📋 Получаем список профилей')
-  
-  const response = await fetch('https://api.multilogin.com/profile', {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Accept': 'application/json'
-    }
-  })
-
-  const result = await response.json()
-  
-  if (!response.ok) {
-    throw new Error(`Ошибка получения профилей: ${JSON.stringify(result)}`)
-  }
-
-  console.log('✅ Список профилей получен:', result)
-  return result
+  console.log('✅ [DEMO] Список профилей получен:', mockProfiles.length, 'профилей')
+  return { data: mockProfiles, total: mockProfiles.length }
 }
