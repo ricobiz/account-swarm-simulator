@@ -7,7 +7,7 @@ const corsHeaders = {
 }
 
 // Симуляция выполнения RPA задач для тестирования
-async function simulateRPAExecution(task: any): Promise<any> {
+async function simulateRPAExecution(task: any, multiloginProfile?: string): Promise<any> {
   console.log('🎯 Симуляция выполнения RPA задачи:', task.taskId)
   
   // Случайная задержка от 3 до 8 секунд
@@ -26,11 +26,18 @@ async function simulateRPAExecution(task: any): Promise<any> {
       data: {
         platform: task.metadata?.platform || 'unknown',
         account: task.metadata?.account?.username || 'test-account',
-        multilogin_profile: `profile_${Date.now()}`,
+        multilogin_profile: multiloginProfile || `simulated_profile_${Date.now()}`,
+        multilogin_integrated: !!multiloginProfile,
         screenshot_urls: [
           `https://example.com/screenshot_${Date.now()}_1.png`,
           `https://example.com/screenshot_${Date.now()}_2.png`
-        ]
+        ],
+        browser_fingerprint: {
+          user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          screen_resolution: '1920x1080',
+          timezone: 'Europe/Moscow',
+          language: 'ru-RU'
+        }
       }
     }
   } else {
@@ -87,11 +94,29 @@ serve(async (req) => {
       }
 
       try {
-        // Для демонстрации используем симуляцию
-        // В реальном проекте здесь будет интеграция с Multilogin API
-        console.log('🎮 Запуск симуляции RPA выполнения...')
+        // Используем встроенный Multilogin API эмулятор
+        console.log('🔄 Интеграция с Multilogin API...')
         
-        const result = await simulateRPAExecution(task)
+        // Вызываем функцию multilogin-api для создания профиля
+        let multiloginProfile = null
+        try {
+          const createProfileResponse = await supabase.functions.invoke('multilogin-api', {
+            body: {
+              platform: task.metadata?.platform || 'instagram',
+              username: task.metadata?.account?.username || 'test_user',
+              password: task.metadata?.account?.password || 'test_pass'
+            }
+          })
+          
+          if (createProfileResponse.data?.success) {
+            multiloginProfile = createProfileResponse.data.profile_id
+            console.log('✅ Multilogin профиль создан:', multiloginProfile)
+          }
+        } catch (error) {
+          console.warn('⚠️ Ошибка создания Multilogin профиля:', error.message)
+        }
+        
+        const result = await simulateRPAExecution(task, multiloginProfile)
         
         // Обновляем результат в базе данных
         const status = result.success ? 'completed' : 'failed'

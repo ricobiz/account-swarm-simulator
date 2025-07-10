@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Cloud, Activity, CheckCircle, XCircle, RefreshCw, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CloudBotStatus {
   online: boolean;
@@ -24,27 +25,27 @@ export const CloudRPAStatus: React.FC = () => {
     setLoading(true);
     
     try {
-      // Получаем URL облачного бота из Supabase секретов
-      const response = await fetch('/api/rpa-bot-status');
+      // Используем встроенный RPA health check
+      const { data, error } = await supabase.functions.invoke('rpa-health');
       
-      if (response.ok) {
-        const data = await response.json();
-        setStatus({
-          online: true,
-          version: data.version,
-          environment: data.environment,
-          capabilities: data.capabilities,
-          lastCheck: new Date().toLocaleString(),
-          url: data.url
-        });
-        
-        toast({
-          title: "Облачный RPA-бот онлайн",
-          description: `Версия: ${data.version}, Среда: ${data.environment}`,
-        });
-      } else {
-        throw new Error('Бот недоступен');
+      if (error) {
+        throw new Error(error.message);
       }
+      
+      setStatus({
+        online: data.online,
+        version: data.version,
+        environment: data.service,
+        capabilities: Object.keys(data.components || {}),
+        lastCheck: new Date().toLocaleString(),
+        url: undefined
+      });
+      
+      toast({
+        title: "Встроенный RPA сервис",
+        description: `Статус: ${data.status}, Версия: ${data.version}`,
+      });
+      
     } catch (error: any) {
       setStatus({
         online: false,
@@ -52,8 +53,8 @@ export const CloudRPAStatus: React.FC = () => {
       });
       
       toast({
-        title: "Облачный RPA-бот недоступен",
-        description: "Проверьте настройки RPA_BOT_ENDPOINT",
+        title: "Ошибка RPA сервиса",
+        description: error.message || "Сервис временно недоступен",
         variant: "destructive"
       });
     } finally {
@@ -74,8 +75,8 @@ export const CloudRPAStatus: React.FC = () => {
     <Card className="bg-gray-800 border-gray-700">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-white">
-          <Cloud className="h-5 w-5 text-blue-400" />
-          Облачный RPA-бот
+          <Activity className="h-5 w-5 text-green-400" />
+          Встроенный RPA сервис
           <Badge variant={status.online ? "default" : "destructive"} className="ml-auto">
             {status.online ? "Онлайн" : "Офлайн"}
           </Badge>
