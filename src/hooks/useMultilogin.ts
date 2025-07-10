@@ -249,6 +249,8 @@ export const useMultilogin = () => {
         .from('multilogin_tokens')
         .select('token, expires_at')
         .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
       
       if (error) {
