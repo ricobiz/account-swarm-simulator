@@ -6,8 +6,6 @@
 import os
 import logging
 from flask import Flask, jsonify, request
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -24,38 +22,15 @@ def health_check():
     })
 
 @app.route('/test', methods=['GET'])
-def test_browser():
-    """Тест браузера"""
+def test_basic():
+    """Базовый тест без браузера"""
     try:
-        logger.info("Настройка Chrome для Railway...")
+        logger.info("Базовый тест сервера...")
         
-        options = Options()
-        # Критически важные опции для Railway
-        options.add_argument('--headless=new')
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_argument('--disable-gpu')
-        options.add_argument('--disable-extensions')
-        options.add_argument('--disable-plugins')
-        options.add_argument('--disable-images')
-        options.add_argument('--disable-javascript')
-        options.add_argument('--disable-web-security')
-        options.add_argument('--disable-features=VizDisplayCompositor')
-        options.add_argument('--window-size=1920,1080')
-        options.add_argument('--remote-debugging-port=9222')
-        
-        # Явно указываем путь к Chrome
-        options.binary_location = '/usr/bin/google-chrome-stable'
-        
-        driver = webdriver.Chrome(options=options)
-        driver.get("https://www.google.com")
-        title = driver.title
-        driver.quit()
-        
-        logger.info(f"Тест успешен: {title}")
         return jsonify({
             'success': True,
-            'title': title
+            'message': 'Сервер работает',
+            'version': '1.0.0-basic'
         })
         
     except Exception as e:
