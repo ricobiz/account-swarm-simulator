@@ -11,6 +11,17 @@ serve(async (req) => {
   }
 
   try {
+    // Поддерживаем только POST запросы для тестирования
+    if (req.method !== 'POST') {
+      return new Response(JSON.stringify({
+        error: 'Метод не поддерживается',
+        message: 'Используйте POST запрос для тестирования'
+      }), {
+        status: 405,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     const email = Deno.env.get('MULTILOGIN_EMAIL') || 'thailandislive@gmail.com'
     const password = Deno.env.get('MULTILOGIN_PASSWORD') || 'multilogin4815A!'
     

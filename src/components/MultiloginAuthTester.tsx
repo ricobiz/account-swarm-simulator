@@ -14,7 +14,12 @@ export const MultiloginAuthTester = () => {
     try {
       console.log('🔄 Запуск теста Multilogin API...')
       
-      const { data, error } = await supabase.functions.invoke('test-multilogin-auth')
+      const { data, error } = await supabase.functions.invoke('test-multilogin-auth', {
+        body: {},
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
       
       if (error) {
         throw error
