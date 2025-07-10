@@ -3,9 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
-import { MultiloginAuthTester } from '@/components/MultiloginAuthTester';
 import { MultiloginProfileManager } from '@/components/MultiloginProfileManager';
+import { MultiloginTokenStatus } from '@/components/MultiloginTokenStatus';
 
 interface TestResult {
   success: boolean;
@@ -14,8 +16,6 @@ interface TestResult {
 }
 
 export default function TestFunctionality() {
-  const [multiloginResult, setMultiloginResult] = useState<TestResult | null>(null);
-  const [profileResult, setProfileResult] = useState<TestResult | null>(null);
   const [rpaResult, setRpaResult] = useState<TestResult | null>(null);
   const [secretsResult, setSecretsResult] = useState<TestResult | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
@@ -26,70 +26,6 @@ export default function TestFunctionality() {
     const logMessage = `[${timestamp}] ${message}`;
     setLogs(prev => [...prev, logMessage]);
     console.log(`[${type.toUpperCase()}] ${message}`);
-  };
-
-  const testMultiloginTokens = async () => {
-    setLoading(prev => ({ ...prev, multilogin: true }));
-    try {
-      log('🚀 Получение токенов Multilogin...');
-      
-      const { data, error } = await supabase.functions.invoke('multilogin-token-manager', {
-        body: {}
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      log(`✅ Токены получены: ${JSON.stringify(data, null, 2)}`, 'success');
-      setMultiloginResult({
-        success: true,
-        message: 'Токены получены успешно!',
-        data: data
-      });
-    } catch (error: any) {
-      log(`❌ Ошибка получения токенов: ${error.message}`, 'error');
-      setMultiloginResult({
-        success: false,
-        message: error.message
-      });
-    } finally {
-      setLoading(prev => ({ ...prev, multilogin: false }));
-    }
-  };
-
-  const testMultiloginProfile = async () => {
-    setLoading(prev => ({ ...prev, profile: true }));
-    try {
-      log('🚀 Создание Multilogin профиля...');
-      
-      const { data, error } = await supabase.functions.invoke('multilogin-api', {
-        body: {
-          platform: 'instagram',
-          username: `test_user_${Date.now()}`,
-          password: 'test_password'
-        }
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      log(`✅ Профиль создан: ${JSON.stringify(data, null, 2)}`, 'success');
-      setProfileResult({
-        success: true,
-        message: 'Профиль создан успешно!',
-        data: data
-      });
-    } catch (error: any) {
-      log(`❌ Ошибка создания профиля: ${error.message}`, 'error');
-      setProfileResult({
-        success: false,
-        message: error.message
-      });
-    } finally {
-      setLoading(prev => ({ ...prev, profile: false }));
-    }
   };
 
   const testRPATask = async () => {
@@ -168,129 +104,224 @@ export default function TestFunctionality() {
     }
   };
 
-  const testSimpleMultilogin = async () => {
-    setLoading(prev => ({ ...prev, simple: true }));
-    try {
-      log('🧪 Тестирование упрощенной Multilogin функции...');
-      
-      const { data, error } = await supabase.functions.invoke('multilogin-simple', {
-        body: {}
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      log(`✅ Упрощенный тест завершен: ${JSON.stringify(data, null, 2)}`, 'success');
-      setMultiloginResult({
-        success: data.success,
-        message: data.success ? 'Упрощенная функция работает!' : data.error,
-        data: data
-      });
-    } catch (error: any) {
-      log(`❌ Ошибка упрощенной функции: ${error.message}`, 'error');
-      setMultiloginResult({
-        success: false,
-        message: error.message
-      });
-    } finally {
-      setLoading(prev => ({ ...prev, simple: false }));
-    }
+  const clearLogs = () => {
+    setLogs([]);
+    log('📋 Логи очищены');
   };
 
   React.useEffect(() => {
     log('🎯 Система тестирования запущена');
-    log('📋 Готова к тестированию реальной функциональности');
+    log('📋 Готова к тестированию функциональности');
   }, []);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold mb-2">🧪 Тест реальной функциональности RPA</h1>
-        <p className="text-muted-foreground">Проверка интеграции с Multilogin API и Railway RPA Bot</p>
+        <h1 className="text-3xl font-bold mb-2">🧪 Панель тестирования RPA системы</h1>
+        <p className="text-muted-foreground">
+          Централизованное управление и тестирование всех компонентов RPA системы
+        </p>
       </div>
 
-      {/* Основное тестирование Multilogin API */}
-      <MultiloginAuthTester />
+      <Tabs defaultValue="multilogin" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="multilogin">🔐 Multilogin</TabsTrigger>
+          <TabsTrigger value="rpa">🤖 RPA Tasks</TabsTrigger>
+          <TabsTrigger value="system">⚙️ System</TabsTrigger>
+          <TabsTrigger value="logs">📋 Logs</TabsTrigger>
+        </TabsList>
 
-      {/* Управление профилями Multilogin */}
-      <MultiloginProfileManager />
+        {/* Multilogin вкладка */}
+        <TabsContent value="multilogin" className="space-y-6">
+          <div className="grid gap-6">
+            {/* Статус токенов */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  🔑 Статус токенов Multilogin
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <MultiloginTokenStatus />
+              </CardContent>
+            </Card>
 
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-        {/* Тест создания профиля */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-foreground">
-              👤 Multilogin профиль
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button 
-              onClick={testMultiloginProfile}
-              disabled={loading.profile}
-              className="w-full"
-            >
-              {loading.profile ? 'Создание...' : 'Создать профиль'}
-            </Button>
-            {profileResult && (
-              <div className={`p-3 rounded ${profileResult.success ? 'bg-green-50 text-green-800 dark:bg-green-950/20 dark:text-green-200' : 'bg-red-50 text-red-800 dark:bg-red-950/20 dark:text-red-200'}`}>
-                <Badge variant={profileResult.success ? 'default' : 'destructive'} className="mb-2">
-                  {profileResult.success ? '✅ Успешно' : '❌ Ошибка'}
-                </Badge>
-                <p className="text-sm">{profileResult.message}</p>
-                {profileResult.data?.profile_id && (
-                  <p className="text-xs mt-1">ID: {profileResult.data.profile_id}</p>
+            <Separator />
+
+            {/* Управление профилями */}
+            <MultiloginProfileManager />
+          </div>
+        </TabsContent>
+
+        {/* RPA Tasks вкладка */}
+        <TabsContent value="rpa" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                🤖 Тестирование RPA задач
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Button 
+                  onClick={testRPATask}
+                  disabled={loading.rpa}
+                  size="lg"
+                  className="h-16"
+                >
+                  {loading.rpa ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Выполнение задачи...
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <div className="text-lg">🚀 Запустить тест RPA</div>
+                      <div className="text-xs opacity-75">Тестирование базовой RPA задачи</div>
+                    </div>
+                  )}
+                </Button>
+
+                <div className="space-y-2">
+                  <h4 className="font-medium">Что тестируется:</h4>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>• Создание RPA задачи</li>
+                    <li>• Навигация по URL</li>
+                    <li>• Ожидание загрузки</li>
+                    <li>• Создание скриншота</li>
+                  </ul>
+                </div>
+              </div>
+
+              {rpaResult && (
+                <div className={`p-4 rounded-lg border ${
+                  rpaResult.success 
+                    ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' 
+                    : 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800'
+                }`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant={rpaResult.success ? 'default' : 'destructive'}>
+                      {rpaResult.success ? '✅ Успешно' : '❌ Ошибка'}
+                    </Badge>
+                  </div>
+                  <p className="text-sm font-medium">{rpaResult.message}</p>
+                  {rpaResult.data?.taskId && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Task ID: {rpaResult.data.taskId}
+                    </p>
+                  )}
+                  {rpaResult.data && (
+                    <details className="mt-3">
+                      <summary className="text-xs cursor-pointer text-muted-foreground">
+                        Показать детали ответа
+                      </summary>
+                      <pre className="text-xs bg-muted p-2 rounded mt-2 overflow-auto">
+                        {JSON.stringify(rpaResult.data, null, 2)}
+                      </pre>
+                    </details>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* System вкладка */}
+        <TabsContent value="system" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                ⚙️ Системные тесты
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Button 
+                  onClick={testSecrets}
+                  disabled={loading.secrets}
+                  size="lg"
+                  variant="outline"
+                  className="h-16"
+                >
+                  {loading.secrets ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                      Проверка секретов...
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <div className="text-lg">🔍 Тест секретов</div>
+                      <div className="text-xs opacity-75">Проверка Edge Functions и секретов</div>
+                    </div>
+                  )}
+                </Button>
+
+                <div className="space-y-2">
+                  <h4 className="font-medium">Что проверяется:</h4>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>• Доступность секретов</li>
+                    <li>• Работа Edge Functions</li>
+                    <li>• Конфигурация переменных</li>
+                    <li>• Связи с внешними API</li>
+                  </ul>
+                </div>
+              </div>
+
+              {secretsResult && (
+                <div className={`p-4 rounded-lg border ${
+                  secretsResult.success 
+                    ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' 
+                    : 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800'
+                }`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant={secretsResult.success ? 'default' : 'destructive'}>
+                      {secretsResult.success ? '✅ Успешно' : '❌ Ошибка'}
+                    </Badge>
+                  </div>
+                  <p className="text-sm font-medium">{secretsResult.message}</p>
+                  {secretsResult.data && (
+                    <details className="mt-3">
+                      <summary className="text-xs cursor-pointer text-muted-foreground">
+                        Показать детали ответа
+                      </summary>
+                      <pre className="text-xs bg-muted p-2 rounded mt-2 overflow-auto">
+                        {JSON.stringify(secretsResult.data, null, 2)}
+                      </pre>
+                    </details>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Logs вкладка */}
+        <TabsContent value="logs" className="space-y-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>📋 Логи выполнения</CardTitle>
+              <Button onClick={clearLogs} variant="outline" size="sm">
+                Очистить логи
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-96 w-full rounded border p-4 bg-slate-950 text-green-400 font-mono text-sm">
+                {logs.length === 0 ? (
+                  <div className="text-muted-foreground text-center py-8">
+                    Логи пусты. Выполните любой тест для появления логов.
+                  </div>
+                ) : (
+                  logs.map((log, index) => (
+                    <div key={index} className="mb-1 break-words">
+                      {log}
+                    </div>
+                  ))
                 )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Тест RPA задачи */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-foreground">
-              🤖 RPA задача
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button 
-              onClick={testRPATask}
-              disabled={loading.rpa}
-              className="w-full"
-            >
-              {loading.rpa ? 'Выполнение...' : 'Выполнить задачу'}
-            </Button>
-            {rpaResult && (
-              <div className={`p-3 rounded ${rpaResult.success ? 'bg-green-50 text-green-800 dark:bg-green-950/20 dark:text-green-200' : 'bg-red-50 text-red-800 dark:bg-red-950/20 dark:text-red-200'}`}>
-                <Badge variant={rpaResult.success ? 'default' : 'destructive'} className="mb-2">
-                  {rpaResult.success ? '✅ Успешно' : '❌ Ошибка'}
-                </Badge>
-                <p className="text-sm">{rpaResult.message}</p>
-                {rpaResult.data?.taskId && (
-                  <p className="text-xs mt-1">Task ID: {rpaResult.data.taskId}</p>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Логи */}
-      <Card>
-        <CardHeader>
-          <CardTitle>📋 Логи выполнения</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-64 w-full rounded border p-4 bg-slate-950 text-green-400 font-mono text-sm">
-            {logs.map((log, index) => (
-              <div key={index} className="mb-1">
-                {log}
-              </div>
-            ))}
-          </ScrollArea>
-        </CardContent>
-      </Card>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
