@@ -127,13 +127,16 @@ export const MultiloginTokenStatus: React.FC = () => {
           </Button>
           
           <Button
-            onClick={handleRefreshToken}
+            onClick={() => {
+              console.log('🔴 КНОПКА ОБНОВИТЬ ТОКЕН НАЖАТА!');
+              handleRefreshToken();
+            }}
             disabled={loading}
             size="sm"
             className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
           >
             <Key className="h-4 w-4" />
-            Обновить токен
+            {loading ? 'Обновляется...' : 'Обновить токен'}
           </Button>
         </div>
 

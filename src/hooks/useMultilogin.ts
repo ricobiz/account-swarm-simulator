@@ -289,23 +289,38 @@ export const useMultilogin = () => {
   const refreshToken = async (): Promise<boolean> => {
     try {
       setApiState(prev => ({ ...prev, isLoading: true }));
+      console.log('🚀 refreshToken: Начинаем процесс обновления токена...');
       
       const { data, error } = await supabase.functions.invoke('multilogin-token-manager', {
         method: 'POST'
       });
       
-      if (error) throw error;
+      console.log('🚀 refreshToken: Ответ от Edge Function:', { data, error });
+      
+      if (error) {
+        console.error('❌ refreshToken: Ошибка от Edge Function:', error);
+        throw error;
+      }
       
       if (data?.success) {
+        console.log('✅ refreshToken: Токен успешно обновлен!');
         toast({
           title: "Токен обновлен",
           description: "Multilogin токен успешно обновлен и готов к работе"
         });
         return true;
+      } else {
+        console.warn('⚠️ refreshToken: Edge Function вернул success=false:', data);
+        toast({
+          title: "Ошибка обновления",
+          description: data?.message || "Неизвестная ошибка",
+          variant: "destructive"
+        });
       }
       
       return false;
     } catch (error: any) {
+      console.error('❌ refreshToken: Исключение:', error);
       toast({
         title: "Ошибка обновления токена",
         description: error.message,
@@ -313,6 +328,7 @@ export const useMultilogin = () => {
       });
       return false;
     } finally {
+      console.log('🏁 refreshToken: Завершаем процесс...');
       setApiState(prev => ({ ...prev, isLoading: false }));
     }
   };
