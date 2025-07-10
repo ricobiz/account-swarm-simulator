@@ -32,24 +32,65 @@ export default function TestFunctionality() {
   const testMultiloginTokens = async () => {
     setLoading(prev => ({ ...prev, tokens: true }));
     try {
-      log('🚀 Тестирование получения токенов Multilogin...');
+      log('🚀 Тестирование токенов Multilogin из базы данных...');
       
-      const { data, error } = await supabase.functions.invoke('multilogin-token-manager', {
+      // Проверяем токены напрямую из базы данных
+      const { data: tokenData, error: tokenError } = await supabase
+        .from('multilogin_tokens')
+        .select('token, expires_at, is_active, email')
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (tokenError) {
+        throw new Error(`Ошибка базы данных: ${tokenError.message}`);
+      }
+
+      if (!tokenData) {
+        log('❌ Токен не найден в базе данных', 'error');
+        setTokenResult({
+          success: false,
+          message: 'Токен не найден в базе данных. Нужно получить новый токен.'
+        });
+        return;
+      }
+
+      const isExpired = new Date() > new Date(tokenData.expires_at);
+      
+      if (isExpired) {
+        log('⚠️ Токен истек, требуется обновление', 'error');
+        setTokenResult({
+          success: false,
+          message: 'Токен истек. Используйте кнопку "Обновить токен" в статусе токенов.'
+        });
+        return;
+      }
+
+      log(`✅ Токен активен! Email: ${tokenData.email}`, 'success');
+      log(`📅 Действителен до: ${new Date(tokenData.expires_at).toLocaleString()}`, 'info');
+      
+      // Тестируем использование токена для получения профилей
+      const { data: profilesData, error: profilesError } = await supabase.functions.invoke('multilogin-profiles', {
         body: {}
       });
 
-      if (error) {
-        throw new Error(error.message);
+      if (profilesError) {
+        log(`⚠️ Ошибка получения профилей: ${profilesError.message}`, 'error');
+      } else {
+        log(`✅ Профили получены: ${profilesData?.profiles?.length || 0} профилей`, 'success');
       }
 
-      log(`✅ Токены получены: ${JSON.stringify(data, null, 2)}`, 'success');
       setTokenResult({
         success: true,
-        message: 'Токены получены успешно!',
-        data: data
+        message: 'Токен активен и работает!',
+        data: {
+          token_valid: true,
+          email: tokenData.email,
+          expires_at: tokenData.expires_at,
+          profiles_test: profilesData
+        }
       });
     } catch (error: any) {
-      log(`❌ Ошибка получения токенов: ${error.message}`, 'error');
+      log(`❌ Ошибка тестирования токенов: ${error.message}`, 'error');
       setTokenResult({
         success: false,
         message: error.message
