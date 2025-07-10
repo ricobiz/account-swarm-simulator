@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MultiloginTestButton } from '@/components/MultiloginTestButton';
 import { TestRPAButton } from '@/components/TestRPAButton';
 import { MultiloginStatus } from './MultiloginStatus';
 import { CloudRPAStatus } from './CloudRPAStatus';
@@ -184,26 +185,32 @@ export const EnhancedRPADashboard: React.FC = () => {
         <TabsContent value="testing" className="space-y-6">
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <TestRPAButton />
+            <MultiloginTestButton />
             
-            <Card className="bg-gray-800/50 border-gray-700">
+            <Card className="bg-gray-800/50 border-gray-700 xl:col-span-2">
               <CardHeader>
-                <CardTitle className="text-white">Тестовые сценарии</CardTitle>
+                <CardTitle className="text-white">Информация о тестировании</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="bg-blue-900/30 rounded-lg p-3 border border-blue-500/30">
-                    <h4 className="text-blue-200 font-medium">🎯 Telegram лайки</h4>
-                    <p className="text-blue-300 text-sm">Автоматическая постановка реакций в Telegram каналах</p>
+              <CardContent>
+                <div className="space-y-4 text-gray-300">
+                  <div>
+                    <h4 className="text-lg font-semibold mb-2">🔧 Доступные тесты:</h4>
+                    <ul className="list-disc list-inside space-y-2 ml-4">
+                      <li><strong>Базовый тест RPA:</strong> Проверка основных функций без входа в аккаунт</li>
+                      <li><strong>Telegram лайк:</strong> Автоматическая постановка лайка в Telegram канале</li>
+                      <li><strong>Multilogin тест:</strong> Полноценный тест с созданием профиля и входом в аккаунт</li>
+                    </ul>
                   </div>
                   
-                  <div className="bg-red-900/30 rounded-lg p-3 border border-red-500/30">
-                    <h4 className="text-red-200 font-medium">📺 YouTube взаимодействия</h4>
-                    <p className="text-red-300 text-sm">Лайки, подписки, комментарии на YouTube</p>
-                  </div>
-                  
-                  <div className="bg-purple-900/30 rounded-lg p-3 border border-purple-500/30">
-                    <h4 className="text-purple-200 font-medium">📸 Instagram активность</h4>
-                    <p className="text-purple-300 text-sm">Лайки постов, подписки, просмотры Stories</p>
+                  <div>
+                    <h4 className="text-lg font-semibold mb-2">🎯 Multilogin возможности:</h4>
+                    <ul className="list-disc list-inside space-y-2 ml-4">
+                      <li>Автоматическое создание браузерных профилей</li>
+                      <li>Обход антидетекта и защиты платформ</li>
+                      <li>Уникальные отпечатки браузера для каждого аккаунта</li>
+                      <li>Управление прокси и геолокацией</li>
+                      <li>Selenium интеграция для автоматизации</li>
+                    </ul>
                   </div>
                 </div>
               </CardContent>
