@@ -209,82 +209,14 @@ export default function TestFunctionality() {
         <p className="text-muted-foreground">Проверка интеграции с Multilogin API и Railway RPA Bot</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {/* Тест секретов - самый важный */}
-        <Card className="border-yellow-500 bg-yellow-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-yellow-800">
-              🔍 Тест секретов
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button 
-              onClick={testSecrets}
-              disabled={loading.secrets}
-              className="w-full bg-yellow-600 hover:bg-yellow-700"
-            >
-              {loading.secrets ? 'Проверка...' : 'Проверить секреты'}
-            </Button>
-            {secretsResult && (
-              <div className={`p-3 rounded ${secretsResult.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-                <Badge variant={secretsResult.success ? 'default' : 'destructive'} className="mb-2">
-                  {secretsResult.success ? '✅ Успешно' : '❌ Ошибка'}
-                </Badge>
-                <p className="text-sm">{secretsResult.message}</p>
-                {secretsResult.data?.secrets_values && (
-                  <div className="text-xs mt-2">
-                    <p>EMAIL: {secretsResult.data.secrets_values.MULTILOGIN_EMAIL}</p>
-                    <p>PASSWORD: {secretsResult.data.secrets_values.MULTILOGIN_PASSWORD}</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Основное тестирование Multilogin API */}
+      <MultiloginAuthTester />
 
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
-        {/* Тест токенов Multilogin */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              🔐 Multilogin токены
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button 
-              onClick={testMultiloginTokens}
-              disabled={loading.multilogin}
-              className="w-full"
-            >
-              {loading.multilogin ? 'Получение...' : 'Получить токены'}
-            </Button>
-            <Button 
-              onClick={testSimpleMultilogin}
-              disabled={loading.simple}
-              className="w-full bg-blue-600 hover:bg-blue-700"
-            >
-              {loading.simple ? 'Тест...' : '🧪 Простой тест'}
-            </Button>
-            {multiloginResult && (
-              <div className={`p-3 rounded ${multiloginResult.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-                <Badge variant={multiloginResult.success ? 'default' : 'destructive'} className="mb-2">
-                  {multiloginResult.success ? '✅ Успешно' : '❌ Ошибка'}
-                </Badge>
-                <p className="text-sm">{multiloginResult.message}</p>
-                {multiloginResult.data?.email && (
-                  <p className="text-xs mt-1">Email: {multiloginResult.data.email}</p>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
         {/* Тест создания профиля */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-foreground">
               👤 Multilogin профиль
             </CardTitle>
           </CardHeader>
@@ -297,7 +229,7 @@ export default function TestFunctionality() {
               {loading.profile ? 'Создание...' : 'Создать профиль'}
             </Button>
             {profileResult && (
-              <div className={`p-3 rounded ${profileResult.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+              <div className={`p-3 rounded ${profileResult.success ? 'bg-green-50 text-green-800 dark:bg-green-950/20 dark:text-green-200' : 'bg-red-50 text-red-800 dark:bg-red-950/20 dark:text-red-200'}`}>
                 <Badge variant={profileResult.success ? 'default' : 'destructive'} className="mb-2">
                   {profileResult.success ? '✅ Успешно' : '❌ Ошибка'}
                 </Badge>
@@ -313,7 +245,7 @@ export default function TestFunctionality() {
         {/* Тест RPA задачи */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-foreground">
               🤖 RPA задача
             </CardTitle>
           </CardHeader>
@@ -326,7 +258,7 @@ export default function TestFunctionality() {
               {loading.rpa ? 'Выполнение...' : 'Выполнить задачу'}
             </Button>
             {rpaResult && (
-              <div className={`p-3 rounded ${rpaResult.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+              <div className={`p-3 rounded ${rpaResult.success ? 'bg-green-50 text-green-800 dark:bg-green-950/20 dark:text-green-200' : 'bg-red-50 text-red-800 dark:bg-red-950/20 dark:text-red-200'}`}>
                 <Badge variant={rpaResult.success ? 'default' : 'destructive'} className="mb-2">
                   {rpaResult.success ? '✅ Успешно' : '❌ Ошибка'}
                 </Badge>
@@ -339,9 +271,6 @@ export default function TestFunctionality() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Новый тестер API */}
-      <MultiloginAuthTester />
 
       {/* Логи */}
       <Card>
