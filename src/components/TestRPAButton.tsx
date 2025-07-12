@@ -299,21 +299,36 @@ export const TestRPAButton: React.FC = () => {
                   return;
                 }
                 
+                
                 addLog('📊 Результат прямой проверки:');
                 addLog(`🌐 RPA Endpoint: ${data.rpa_endpoint}`);
                 addLog(`💚 Health Check: ${data.health_check?.status || 'ERROR'}`);
                 addLog(`🧪 RPA Test Success: ${data.rpa_test?.success || false}`);
                 addLog(`🔗 Multilogin Connected: ${data.multilogin_status?.connected || false}`);
                 
+                // Детальная отладка токена
+                if (data.token_info) {
+                  addLog(`🔑 Токен из базы: ${data.token_info.has_database_token ? 'ЕСТЬ' : 'НЕТ'}`);
+                  if (data.token_info.token_email) {
+                    addLog(`📧 Email токена: ${data.token_info.token_email}`);
+                  }
+                }
+                
+                // Детальная отладка RPA теста
+                addLog(`🔍 Все данные RPA теста: ${JSON.stringify(Object.keys(data.rpa_test || {}))}`);
+                if (data.rpa_test) {
+                  addLog(`📋 RPA Test Details: success=${data.rpa_test.success}, task_id=${data.rpa_test.task_id}`);
+                }
                 
                 if (data.rpa_test?.screenshot) {
                   addLog('📸 Скриншот получен!');
                   addLog(`📏 Размер скриншота: ${data.rpa_test.screenshot.length} символов`);
+                  addLog(`🎨 Начало скриншота: ${data.rpa_test.screenshot.substring(0, 100)}...`);
                   // Сохраняем скриншот для отображения
                   setScreenshotData(data.rpa_test.screenshot);
                 } else {
                   addLog('❌ Скриншот не получен');
-                  addLog(`🔍 Данные RPA теста: ${JSON.stringify(Object.keys(data.rpa_test || {}))}`);
+                  addLog(`🔍 Содержимое rpa_test: ${JSON.stringify(data.rpa_test, null, 2).substring(0, 500)}...`);
                   setScreenshotData(null);
                 }
                 
