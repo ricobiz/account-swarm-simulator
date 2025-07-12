@@ -31,7 +31,16 @@ async function executeRPATask(task: any, multiloginProfile?: string): Promise<an
         multilogin_profile: multiloginProfile,
         human_behavior: task.humanBehavior || true,
         timeout: task.timeout || 60,
-        platform: task.metadata?.platform || 'unknown'
+        platform: task.metadata?.platform || 'unknown',
+        metadata: {
+          platform: task.metadata?.platform || 'web',
+          account: task.metadata?.account || {},
+          multilogin_token_info: {
+            token: Deno.env.get('MULTILOGIN_TOKEN'), // Передаем реальный токен
+            email: task.metadata?.multilogin_token_info?.email,
+            expires_at: task.metadata?.multilogin_token_info?.expires_at
+          }
+        }
       })
     })
 

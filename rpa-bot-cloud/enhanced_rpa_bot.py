@@ -55,9 +55,20 @@ class EnhancedRPABot:
         except Exception as e:
             logger.error(f"Ошибка инициализации Multilogin: {e}")
 
-    def setup_chrome_driver(self, account_data=None):
+    def setup_chrome_driver(self, account_data=None, multilogin_token=None):
         """Настройка Chrome драйвера с антидетектом"""
         try:
+            # Обновляем токен Multilogin если предоставлен
+            if multilogin_token and multilogin_token != os.getenv('MULTILOGIN_TOKEN'):
+                logger.info("🔄 Обновляем токен Multilogin из задачи")
+                self.multilogin = MultiloginManager(multilogin_token)
+                if self.multilogin.check_connection():
+                    logger.info("✅ Multilogin подключен с новым токеном")
+                    self.multilogin.decode_token_info()
+                else:
+                    logger.warning("⚠️ Новый токен Multilogin недействителен")
+                    self.multilogin = None
+            
             # Пробуем использовать Multilogin если доступен
             if self.multilogin and account_data:
                 profile_id = self.multilogin.get_profile_for_account(account_data)
@@ -743,8 +754,24 @@ class EnhancedRPABot:
                 'platform': task.get('metadata', {}).get('platform', 'web')
             }
             
-            # Настройка браузера
-            self.driver = self.setup_chrome_driver(account_data)
+            # Получение токена Multilogin из задачи
+            multilogin_token = None
+            if task.get('metadata', {}).get('multilogin_token_info'):
+                # Ищем токен в разных местах
+                token_info = task.get('metadata', {}).get('multilogin_token_info', {})
+                multilogin_token = token_info.get('token')
+                
+                if not multilogin_token:
+                    # Пробуем достать из environment переменной MULTILOGIN_TOKEN
+                    multilogin_token = os.getenv('MULTILOGIN_TOKEN')
+                    
+                logger.info(f"🔑 Используем токен Multilogin: {'найден' if multilogin_token else 'не найден'}")
+            
+            # Инициализация результатов задачи
+            self.task_results = {}
+            
+            # Настройка браузера с токеном Multilogin
+            self.driver = self.setup_chrome_driver(account_data, multilogin_token)
             
             # Переход на начальную страницу
             initial_url = task.get('url')
@@ -770,6 +797,20 @@ class EnhancedRPABot:
                 else:
                     logger.warning(f"⚠️ Действие {i+1} выполнено с предупреждением")
             
+            # Финальные результаты задачи
+            result_data = {
+                'success': True,
+                'actions_completed': success_count,
+                'total_actions': len(actions),
+                'task_id': task_id,
+                'multilogin_integrated': self.multilogin is not None and self.current_profile_id is not None,
+                'screenshot': self.task_results.get('screenshot') if hasattr(self, 'task_results') else None,
+                'platform': task.get('metadata', {}).get('platform', 'web'),
+                'execution_time': 0,  # TODO: добавить реальное время выполнения
+                'browser_fingerprint': self._get_browser_fingerprint() if self.driver else {},
+                'multilogin_profile': self.current_profile_id
+            }
+            
             # Результат
             if success_count == len(actions):
                 logger.info("✅ Все действия выполнены успешно")
@@ -777,16 +818,18 @@ class EnhancedRPABot:
                     task_id, 
                     'completed', 
                     'Задача выполнена успешно',
-                    {'success': True, 'actions_completed': success_count}
+                    result_data
                 )
                 return True
             else:
                 logger.info(f"⚠️ Выполнено {success_count}/{len(actions)} действий")
+                result_data['success'] = False
+                result_data['warning'] = f'Выполнено частично ({success_count}/{len(actions)})'
                 self.update_task_status(
                     task_id, 
                     'completed', 
                     f'Задача выполнена частично ({success_count}/{len(actions)})',
-                    {'success': True, 'actions_completed': success_count, 'total_actions': len(actions)}
+                    result_data
                 )
                 return True
                 
@@ -841,6 +884,40 @@ class EnhancedRPABot:
                 
         except Exception as e:
             logger.error(f"❌ Ошибка обновления статуса в Supabase: {e}")
+
+    def _get_browser_fingerprint(self):
+        """Получение информации о браузере"""
+        try:
+            fingerprint = {}
+            
+            # Получаем User Agent
+            try:
+                fingerprint['user_agent'] = self.driver.execute_script("return navigator.userAgent;")
+            except:
+                pass
+                
+            # Получаем разрешение экрана
+            try:
+                fingerprint['screen_resolution'] = self.driver.execute_script("return screen.width + 'x' + screen.height;")
+            except:
+                pass
+                
+            # Получаем язык
+            try:
+                fingerprint['language'] = self.driver.execute_script("return navigator.language;")
+            except:
+                pass
+                
+            # Получаем временную зону
+            try:
+                fingerprint['timezone'] = self.driver.execute_script("return Intl.DateTimeFormat().resolvedOptions().timeZone;")
+            except:
+                pass
+                
+            return fingerprint
+        except Exception as e:
+            logger.error(f"Ошибка получения fingerprint: {e}")
+            return {}
 
     def cleanup(self):
         """Очистка ресурсов"""
@@ -914,7 +991,8 @@ def execute_rpa():
             'actions': task.get('actions', []),
             'metadata': {
                 'platform': task.get('platform', 'web'),
-                'account': task.get('account_data', {})
+                'account': task.get('account_data', {}),
+                'multilogin_token_info': task.get('metadata', {}).get('multilogin_token_info', {})
             },
             'multilogin_profile': task.get('multilogin_profile'),
             'timeout': task.get('timeout', 60)
