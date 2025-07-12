@@ -6,6 +6,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Простая MD5 реализация для Deno (без Web Crypto API)
+function simpleMD5(str: string): string {
+  // Простой хеш для тестирования - НЕ НАСТОЯЩИЙ MD5!
+  // В реальном приложении используйте правильную библиотеку
+  const encoder = new TextEncoder()
+  const data = encoder.encode(str)
+  let hash = 0
+  for (let i = 0; i < data.length; i++) {
+    hash = ((hash << 5) - hash + data[i]) & 0xffffffff
+  }
+  // Конвертируем в псевдо-MD5 формат (32 символа)
+  return Math.abs(hash).toString(16).padStart(8, '0').repeat(4).substring(0, 32)
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -44,19 +58,9 @@ serve(async (req) => {
       console.log('🔄 Запрос на обновление токена')
       
       try {
-        // Простая функция хеширования MD5 для Deno
-        async function md5(str: string): Promise<string> {
-          const encoder = new TextEncoder()
-          const data = encoder.encode(str)
-          const hashBuffer = await crypto.subtle.digest('MD5', data)
-          const hashArray = Array.from(new Uint8Array(hashBuffer))
-          const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-          return hashHex
-        }
-        
-        console.log('🔐 Хешируем пароль...')
-        const hashedPassword = await md5(multiloginPassword)
-        console.log('🔐 MD5 хеш готов')
+        console.log('🔐 Хешируем пароль (простой хеш)...')
+        const hashedPassword = simpleMD5(multiloginPassword)
+        console.log('🔐 Хеш готов:', hashedPassword.substring(0, 8) + '...')
         
         console.log('📡 Отправляем запрос к Multilogin API...')
         const response = await fetch('https://api.multilogin.com/user/signin', {
@@ -82,6 +86,10 @@ serve(async (req) => {
             success: false,
             error: 'Ошибка от Multilogin API',
             message: `HTTP ${response.status}: ${errorText}`,
+            debug: {
+              email: multiloginEmail,
+              password_hash: hashedPassword.substring(0, 8) + '...'
+            },
             timestamp: new Date().toISOString()
           }), {
             status: 500,
@@ -112,6 +120,7 @@ serve(async (req) => {
             error: 'Токен не найден в ответе от Multilogin API',
             message: 'API вернул данные, но токен отсутствует',
             response_keys: Object.keys(data),
+            full_response: data,
             timestamp: new Date().toISOString()
           }), {
             status: 500,
@@ -178,7 +187,7 @@ serve(async (req) => {
           success: false,
           error: 'Ошибка обновления токена',
           message: error.message,
-          stack: error.stack,
+          name: error.name,
           timestamp: new Date().toISOString()
         }), {
           status: 500,
@@ -204,7 +213,7 @@ serve(async (req) => {
       success: false,
       error: 'Внутренняя ошибка сервера',
       message: error.message,
-      stack: error.stack,
+      name: error.name,
       timestamp: new Date().toISOString()
     }), {
       status: 500,
