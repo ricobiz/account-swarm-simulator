@@ -53,16 +53,16 @@ serve(async (req) => {
       
       const testTask = {
         task_id: `direct_test_${Date.now()}`,
-        url: 'https://httpbin.org/get',
+        url: 'https://www.google.com',
         actions: [
-          { type: 'navigate', url: 'https://httpbin.org/get' },
-          { type: 'wait', duration: 2000 },
-          { type: 'screenshot', description: 'Тестовый скриншот' }
+          { type: 'navigate', url: 'https://www.google.com', description: 'Переходим на Google' },
+          { type: 'wait', duration: 3000, description: 'Ждем загрузки страницы Google' },
+          { type: 'screenshot', description: 'Делаем скриншот Google для теста' }
         ],
         timeout: 30,
         metadata: {
-          platform: 'test',
-          account: { username: 'test' },
+          platform: 'test_google',
+          account: { username: 'test_user' },
           multilogin_token_info: {
             token: Deno.env.get('MULTILOGIN_TOKEN'),
             email: 'test@example.com'
