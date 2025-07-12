@@ -155,14 +155,22 @@ class EnhancedRPABot:
     def setup_chrome_driver(self, account_data=None, multilogin_token=None):
         """Настройка Chrome драйвера с антидетектом"""
         try:
-            # Обновляем токен Multilogin если предоставлен
-            if multilogin_token and multilogin_token != MULTILOGIN_TOKEN:
-                logger.info("🔄 Обновляем токен Multilogin из задачи")
+            # Обновляем токен Multilogin если предоставлен в задаче
+            if multilogin_token:
+                logger.info("🔄 Используем токен Multilogin из задачи")
                 self.multilogin = MultiloginManager(multilogin_token)
                 if self.multilogin.check_connection():
-                    logger.info("✅ Multilogin подключен с новым токеном")
+                    logger.info("✅ Multilogin подключен с токеном из задачи")
                 else:
-                    logger.warning("⚠️ Новый токен Multilogin недействителен")
+                    logger.warning("⚠️ Токен Multilogin из задачи недействителен")
+                    self.multilogin = None
+            elif MULTILOGIN_TOKEN and not self.multilogin:
+                logger.info("🔄 Используем токен Multilogin из переменной окружения")
+                self.multilogin = MultiloginManager()
+                if self.multilogin.check_connection():
+                    logger.info("✅ Multilogin подключен с токеном из переменных")
+                else:
+                    logger.warning("⚠️ Токен Multilogin из переменных недействителен")
                     self.multilogin = None
             
             # Пробуем использовать Multilogin если доступен
@@ -339,16 +347,28 @@ class EnhancedRPABot:
                 'platform': task.get('metadata', {}).get('platform', 'web')
             }
             
-            # Получение токена Multilogin из задачи
+            # Получение токена Multilogin из задачи (приоритет: прямой токен > metadata > переменная окружения)
             multilogin_token = None
-            if task.get('metadata', {}).get('multilogin_token_info'):
+            
+            # Сначала проверяем прямой токен в задаче
+            if task.get('multilogin_token'):
+                multilogin_token = task.get('multilogin_token')
+                logger.info("🔑 Используем токен Multilogin из поля multilogin_token")
+            # Потом проверяем в metadata
+            elif task.get('metadata', {}).get('multilogin_token_info', {}).get('token'):
                 token_info = task.get('metadata', {}).get('multilogin_token_info', {})
                 multilogin_token = token_info.get('token')
+                logger.info("🔑 Используем токен Multilogin из metadata.multilogin_token_info")
+            # Fallback на переменную окружения
+            elif MULTILOGIN_TOKEN:
+                multilogin_token = MULTILOGIN_TOKEN
+                logger.info("🔑 Используем токен Multilogin из переменной окружения")
+            else:
+                logger.warning("⚠️ Токен Multilogin не найден ни в задаче, ни в переменных")
                 
-                if not multilogin_token:
-                    multilogin_token = MULTILOGIN_TOKEN
-                    
-                logger.info(f"🔑 Используем токен Multilogin: {'найден' if multilogin_token else 'не найден'}")
+            logger.info(f"🔑 Итоговый статус токена: {'✅ ЕСТЬ' if multilogin_token else '❌ НЕТ'}")
+            if multilogin_token:
+                logger.info(f"🔑 Токен (первые 50 символов): {multilogin_token[:50]}...")
             
             # Инициализация результатов задачи
             self.task_results = {}
@@ -523,8 +543,15 @@ def execute_rpa():
                 'multilogin_token_info': task.get('metadata', {}).get('multilogin_token_info', {})
             },
             'multilogin_profile': task.get('multilogin_profile'),
-            'timeout': task.get('timeout', 60)
+            'timeout': task.get('timeout', 60),
+            'multilogin_token': task.get('multilogin_token')  # Получаем токен из задачи
         }
+        
+        # Логируем информацию о токене
+        if normalized_task.get('multilogin_token'):
+            logger.info(f"🔑 Получен токен Multilogin в задаче: {normalized_task['multilogin_token'][:50]}...")
+        else:
+            logger.info("⚠️ Токен Multilogin не передан в задаче")
             
         # Запуск задачи
         success = rpa_bot.execute_rpa_task(normalized_task)

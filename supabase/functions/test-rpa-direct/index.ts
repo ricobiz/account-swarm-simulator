@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,6 +32,12 @@ serve(async (req) => {
 
     console.log('🔍 Проверяем RPA бот напрямую:', rpaEndpoint)
 
+    // Инициализируем Supabase клиент
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
     // 1. Проверяем /health endpoint
     let healthStatus = null;
     try {
@@ -51,13 +58,37 @@ serve(async (req) => {
       healthStatus = { error: error.message }
     }
 
-    // 2. Тест простого RPA запроса
+    // 2. Получаем актуальный токен Multilogin из базы данных
+    console.log('🔑 Получаем токен Multilogin из базы данных...')
+    
+    const { data: tokenData, error: tokenError } = await supabase
+      .from('multilogin_tokens')
+      .select('token, email, expires_at')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    let multiloginToken = null;
+    if (tokenError) {
+      console.log('❌ Ошибка получения токена:', tokenError.message)
+    } else if (!tokenData) {
+      console.log('⚠️ Токен Multilogin не найден в базе данных')
+    } else if (new Date() > new Date(tokenData.expires_at)) {
+      console.log('⚠️ Токен Multilogin истек')
+    } else {
+      multiloginToken = tokenData.token;
+      console.log(`✅ Токен Multilogin получен: ${tokenData.email}, истекает: ${tokenData.expires_at}`)
+    }
+
+    // 3. Тест простого RPA запроса
     let rpaTestResult = null;
     try {
       const testTime = new Date().toISOString()
       console.log(`🧪 === ТЕСТИРУЕМ RPA ЗАПРОС ===`)
       console.log(`🕐 Время теста: ${testTime}`)
       console.log(`🎯 URL для теста: https://www.google.com`)
+      console.log(`🔑 Используем токен: ${multiloginToken ? 'ДА' : 'НЕТ'}`)
       
       const testTask = {
         task_id: `direct_test_${Date.now()}`,
@@ -71,11 +102,12 @@ serve(async (req) => {
         metadata: {
           platform: 'test_google',
           account: { username: 'test_user' },
-          multilogin_token_info: {
-            token: Deno.env.get('MULTILOGIN_TOKEN'),
-            email: 'test@example.com'
-          }
-        }
+          multilogin_token_info: multiloginToken ? {
+            token: multiloginToken,
+            email: tokenData?.email || 'unknown'
+          } : null
+        },
+        multilogin_token: multiloginToken // Добавляем токен прямо в задачу
       }
 
       console.log(`📤 Отправляем задачу на RPA бот: ${rpaEndpoint}/execute`)
@@ -115,7 +147,7 @@ serve(async (req) => {
       rpaTestResult = { error: error.message }
     }
 
-    // 3. Проверяем Multilogin статус
+    // 4. Проверяем Multilogin статус
     let multiloginStatus = null;
     try {
       const multiloginResponse = await fetch(`${rpaEndpoint}/multilogin/status`, {
@@ -143,9 +175,10 @@ serve(async (req) => {
       health_check: healthStatus,
       rpa_test: rpaTestResult,
       multilogin_status: multiloginStatus,
-      environment: {
-        has_rpa_endpoint: !!rpaEndpoint,
-        has_multilogin_token: !!Deno.env.get('MULTILOGIN_TOKEN')
+      token_info: {
+        has_database_token: !!multiloginToken,
+        token_email: tokenData?.email || null,
+        token_expires: tokenData?.expires_at || null
       }
     }
 
@@ -155,7 +188,8 @@ serve(async (req) => {
       health_ok: !healthStatus?.error,
       rpa_test_ok: rpaTestResult?.success,
       multilogin_ok: !multiloginStatus?.error,
-      screenshot_received: !!rpaTestResult?.screenshot
+      screenshot_received: !!rpaTestResult?.screenshot,
+      token_sent: !!multiloginToken
     })
 
     return new Response(
