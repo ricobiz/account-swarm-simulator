@@ -34,5 +34,5 @@ ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8080
 
-# Запуск
+# Запуск RPA Bot Enhanced v2.2
 CMD ["python", "rpa_bot_cloud.py"]
