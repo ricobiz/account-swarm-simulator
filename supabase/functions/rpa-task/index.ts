@@ -8,40 +8,11 @@ const corsHeaders = {
 
 // Реальное выполнение RPA задач через Railway RPA Bot
 async function executeRPATask(task: any, multiloginProfile?: string): Promise<any> {
-  console.log('🎯 Выполнение RPA задачи:', task.taskId)
+  console.log('🎯 Выполнение реальной RPA задачи:', task.taskId)
   
   const rpaEndpoint = Deno.env.get('RPA_BOT_ENDPOINT')
-  
-  // Если RPA_BOT_ENDPOINT не настроен, используем mock
-  const endpoint = rpaEndpoint || 'mock'
-  
-  if (endpoint === 'mock' || !rpaEndpoint) {
-    console.log('🤖 Используем Mock RPA Bot')
-    
-    // Вызываем нашу mock edge функцию
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
-    
-    const mockResponse = await supabase.functions.invoke('mock-rpa-bot', {
-      body: {
-        task_id: task.taskId,
-        actions: task.actions || [],
-        url: task.url || '',
-        account_data: task.metadata?.account || {},
-        multilogin_profile: multiloginProfile,
-        human_behavior: task.humanBehavior || true,
-        timeout: task.timeout || 60,
-        platform: task.metadata?.platform || 'unknown'
-      }
-    })
-    
-    if (mockResponse.error) {
-      throw new Error(`Mock RPA error: ${mockResponse.error.message}`)
-    }
-    
-    return mockResponse.data
+  if (!rpaEndpoint) {
+    throw new Error('RPA_BOT_ENDPOINT не настроен в секретах')
   }
 
   try {

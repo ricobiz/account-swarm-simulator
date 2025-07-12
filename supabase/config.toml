@@ -11,6 +11,3 @@ verify_jwt = false
 
 [functions.multilogin-token-manager]
 verify_jwt = false
-
-[functions.mock-rpa-bot]
-verify_jwt = false
