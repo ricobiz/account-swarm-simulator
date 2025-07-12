@@ -108,25 +108,25 @@ Frontend → Edge Function → Railway Bot → Multilogin API → Browser
 - ✅ **Прямая проверка** RPA бота
 - ✅ **Отображение скриншотов**
 
-## 🔍 ТЕКУЩЕЕ СОСТОЯНИЕ
+### 🎯 ТЕКУЩИЙ ФОКУС (НА ЧЕМ СОСРЕДОТОЧЕНЫ СЕЙЧАС)
 
-### На каком этапе мы сейчас:
-**ЭТАП: ОТЛАДКА СКРИНШОТОВ И MULTILOGIN ИНТЕГРАЦИИ**
+**ПРОБЛЕМА:** Скриншоты создаются Railway ботом, но не отображаются в интерфейсе
 
-### Что работает:
-1. ✅ **Токены Multilogin** получаются и сохраняются в DB
-2. ✅ **Railway бот** получает токены из Edge Functions
-3. ✅ **RPA действия** выполняются (navigate, wait, screenshot)
-4. ✅ **Логирование** работает подробно
-5. ✅ **GitHub → Railway** автодеплой настроен
+**ЧТО УЖЕ ИСПРАВИЛИ СЕГОДНЯ:**
+1. ✅ Edge Function теперь получает токены из базы данных (НЕ из env переменных)
+2. ✅ Railway бот получает токены из Edge Function правильно
+3. ✅ URL тестирования изменен с httpbin.org на Google
+4. ✅ Добавлен эндпоинт `/multilogin/st` (исправлена 404 ошибка)
+5. ✅ TestRPAButton добавлен на страницу `/test`
+6. ✅ Улучшено логирование на всех уровнях
 
-### Текущая проблема:
-❌ **Скриншоты создаются, но не отображаются в интерфейсе**
+**ТЕКУЩЕЕ СОСТОЯНИЕ ЛОГОВ:**
+- ✅ `🔑 Получен токен Multilogin в задаче: eyJ...` (токен передается)
+- ✅ `Action 3/3: screenshot` (скриншот создается)
+- ✅ `📸 Скриншот создан и сконвертирован в base64: X символов` (конвертация работает)
+- ❌ Скриншот не доходит до frontend или не отображается
 
-Логи показывают:
-- ✅ `Action 3/3: screenshot` - скриншот создается
-- ✅ `📸 Скриншот создан и сконвертирован в base64` 
-- ❌ Но скриншот не доходит до frontend
+**СЛЕДУЮЩИЙ ШАГ:** Найти где теряется скриншот в цепочке Railway → Edge Function → Frontend
 
 ## 🐛 ПРОБЛЕМЫ КОТОРЫЕ РЕШАЛИ
 
@@ -169,42 +169,345 @@ Frontend → Edge Function → Railway Bot → Multilogin API → Browser
 3. **Добавить настройки прокси**
 4. **Реализовать планировщик задач**
 
-## 📁 КЛЮЧЕВЫЕ ФАЙЛЫ
+## 📁 ДЕТАЛЬНАЯ КАРТА ФАЙЛОВ И СВЯЗЕЙ
 
-### Frontend (Lovable)
+### 🐳 DOCKER ФАЙЛЫ (КРИТИЧЕСКИ ВАЖНО!)
+
+**У НАС ЕСТЬ 3 DOCKER ФАЙЛА:**
+
+1. **`./Dockerfile` (КОРНЕВОЙ) - ИСПОЛЬЗУЕТСЯ RAILWAY**
+   ```dockerfile
+   FROM python:3.11-slim
+   # Копирует из rpa-bot-cloud/
+   COPY rpa-bot-cloud/requirements.txt .
+   COPY rpa-bot-cloud/ .
+   CMD ["python", "rpa_bot_cloud.py"]  # ← ЗАПУСКАЕТ ЭТОТ ФАЙЛ
+   ```
+   - ⚠️ **RAILWAY ИСПОЛЬЗУЕТ ЭТОТ ФАЙЛ**
+   - Находится в корне проекта
+   - Копирует содержимое из `rpa-bot-cloud/`
+   - Запускает `rpa_bot_cloud.py` (НЕ enhanced_rpa_bot.py!)
+
+2. **`./Dockerfile.root` - НЕ ИСПОЛЬЗУЕТСЯ**
+   ```dockerfile
+   # Альтернативная версия с gunicorn
+   # Railway НЕ использует этот файл
+   ```
+
+3. **`./rpa-bot-cloud/Dockerfile` - НЕ ИСПОЛЬЗУЕТСЯ RAILWAY**
+   ```dockerfile
+   # Локальный Docker файл для разработки
+   # Railway его НЕ видит
+   ```
+
+**🚨 ВАЖНО:** Railway смотрит только на корневой `./Dockerfile`!
+
+### 🤖 RPA BOT ФАЙЛЫ (ГДЕ ЧТО НАХОДИТСЯ)
+
+**АКТИВНЫЕ ФАЙЛЫ (ИСПОЛЬЗУЮТСЯ):**
+- `rpa-bot-cloud/rpa_bot_cloud.py` ← **ОСНОВНОЙ ФАЙЛ** (Railway запускает этот)
+- `rpa-bot-cloud/multilogin_integration.py` ← Интеграция с Multilogin
+- `rpa-bot-cloud/requirements.txt` ← Python зависимости
+
+**НЕАКТИВНЫЕ ФАЙЛЫ (НЕ ИСПОЛЬЗУЮТСЯ):**
+- `rpa-bot-cloud/enhanced_rpa_bot.py` ← НЕ используется Railway
+- `rpa-bot/` (вся папка) ← Старая версия, НЕ используется
+
+**КОНФИГУРАЦИЯ RAILWAY:**
+- `railway.json` ← Настройки Railway (builder: DOCKERFILE, startCommand: python rpa_bot_cloud.py)
+
+### 🔗 ВСЕ ССЫЛКИ СИСТЕМЫ
+
+#### 🌐 Production URLs
+- **Railway RPA Bot:** https://account-swarm-simulator-production.up.railway.app/
+  - Health check: `/health`
+  - RPA execution: `/execute`
+  - Multilogin status: `/multilogin/status`
+  - Simple status: `/multilogin/st`
+
+#### 📊 Dashboards
+- **Railway Dashboard:** https://railway.app/dashboard
+  - Проект: `account-swarm-simulator`
+  - Environment: `production`
+  - Логи: Railway Dashboard → Deployments → Logs
+
+- **Supabase Dashboard:** https://supabase.com/dashboard/project/izmgzstdgoswlozinmyk
+  - Project ID: `izmgzstdgoswlozinmyk`
+  - Database: https://supabase.com/dashboard/project/izmgzstdgoswlozinmyk/editor
+  - Edge Functions: https://supabase.com/dashboard/project/izmgzstdgoswlozinmyk/functions
+  - Logs: https://supabase.com/dashboard/project/izmgzstdgoswlozinmyk/logs
+
+#### 🔑 GitHub Repository
+- **Repo:** https://github.com/ricobtz/account-swarm-simulator
+- **Owner:** ricobtz
+- **Branch:** main (автодеплой в Railway)
+
+#### 🛠️ API Endpoints
+
+**Supabase Edge Functions:**
 ```
-src/
-├── pages/TestFunctionality.tsx          # Страница тестирования
-├── components/TestRPAButton.tsx         # Кнопка прямой проверки
-├── components/MultiloginTokenStatus.tsx # Статус токенов
-└── hooks/useMultilogin.ts              # Хук для работы с Multilogin
+https://izmgzstdgoswlozinmyk.supabase.co/functions/v1/
+├── test-rpa-direct              # Прямое тестирование RPA
+├── multilogin-token-manager     # Управление токенами
+├── rpa-task                     # Выполнение RPA задач
+├── multilogin-api               # Multilogin API
+└── rpa-health                   # Проверка здоровья RPA
 ```
 
-### Backend (Supabase)
+**Railway RPA Bot:**
 ```
-supabase/
-├── functions/test-rpa-direct/index.ts   # Прямое тестирование
-├── functions/multilogin-token-manager/  # Управление токенами
-└── migrations/                         # Миграции БД
-```
-
-### Railway Bot
-```
-rpa-bot-cloud/
-├── rpa_bot_cloud.py                    # Основной сервер (ИСПОЛЬЗУЕТСЯ)
-├── enhanced_rpa_bot.py                 # Расширенная версия (НЕ используется)
-├── multilogin_integration.py           # Интеграция Multilogin
-├── Dockerfile                          # Docker контейнер
-└── requirements.txt                    # Python зависимости
+https://account-swarm-simulator-production.up.railway.app/
+├── /health                      # Проверка здоровья
+├── /execute                     # Выполнение RPA задач
+├── /multilogin/status          # Статус Multilogin
+├── /multilogin/st              # Простой статус
+└── /test                       # Тестовый эндпоинт
 ```
 
-### Конфигурация
+### 🗃️ БАЗА ДАННЫХ SUPABASE
+
+**Project Details:**
+- Project ID: `izmgzstdgoswlozinmyk`
+- URL: `https://izmgzstdgoswlozinmyk.supabase.co`
+- Anon Key: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6bWd6c3RkZ29zd2xvemlubXlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxNTk3NzksImV4cCI6MjA2NTczNTc3OX0.5BEISZmOjbbnBCPlqVyvuHiEDf9NOhaHh33U07UNzVU`
+
+**Таблицы:**
+```sql
+multilogin_tokens (
+  id UUID PRIMARY KEY,
+  token TEXT NOT NULL,
+  email TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+)
+
+rpa_tasks (
+  id UUID PRIMARY KEY,
+  task_id TEXT NOT NULL,
+  task_data JSONB NOT NULL,
+  result_data JSONB,
+  status TEXT DEFAULT 'pending',
+  user_id UUID,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+)
+
+accounts (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  username TEXT NOT NULL,
+  password TEXT NOT NULL,
+  platform TEXT NOT NULL,
+  status TEXT DEFAULT 'idle',
+  proxy_id UUID,
+  last_action TIMESTAMPTZ DEFAULT now(),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+)
+
+profiles (
+  id UUID PRIMARY KEY,
+  email TEXT NOT NULL,
+  full_name TEXT,
+  role app_role DEFAULT 'basic',
+  subscription_status subscription_status DEFAULT 'trial',
+  subscription_end TIMESTAMPTZ,
+  trial_end TIMESTAMPTZ,
+  accounts_limit INTEGER DEFAULT 5,
+  scenarios_limit INTEGER DEFAULT 2,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+)
+
+scenarios (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  name TEXT NOT NULL,
+  platform TEXT NOT NULL,
+  config JSONB,
+  status TEXT DEFAULT 'stopped',
+  accounts_count INTEGER DEFAULT 0,
+  progress INTEGER DEFAULT 0,
+  next_run TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+)
+
+proxies (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  ip TEXT NOT NULL,
+  port INTEGER NOT NULL,
+  username TEXT,
+  password TEXT,
+  country TEXT,
+  status TEXT DEFAULT 'offline',
+  speed TEXT,
+  usage INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+)
+
+logs (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  account_id UUID,
+  scenario_id UUID,
+  action TEXT NOT NULL,
+  details TEXT,
+  status TEXT DEFAULT 'info',
+  created_at TIMESTAMPTZ DEFAULT now()
+)
 ```
-./
-├── Dockerfile                          # Railway deployment (корневой)
-├── railway.json                       # Railway настройки
-└── force-update-railway.sh            # Скрипт принудительного обновления
+
+### 🔐 ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ И СЕКРЕТЫ
+
+#### Supabase Secrets
 ```
+SUPABASE_URL=https://izmgzstdgoswlozinmyk.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_SERVICE_ROLE_KEY=[service role key]
+SUPABASE_DB_URL=[database url]
+API_KEY=[some api key]
+client_key=[client key]
+Api=[api value]
+RPA_BOT_ENDPOINT=https://account-swarm-simulator-production.up.railway.app/
+MULTILOGIN_TOKEN=[получается автоматически]
+MULTILOGIN_EMAIL=[multilogin email]
+MULTILOGIN_PASSWORD=[multilogin password]
+```
+
+#### Railway Environment Variables
+- Railway автоматически получает переменные из репозитория
+- Использует `Dockerfile` из корня для сборки
+- PORT автоматически назначается Railway (обычно 8080)
+
+### 📂 ПОЛНАЯ СТРУКТУРА ПРОЕКТА
+
+```
+account-swarm-simulator/
+├── 🐳 Dockerfile                           # ← RAILWAY ИСПОЛЬЗУЕТ ЭТОТ
+├── 🐳 Dockerfile.root                      # ← НЕ используется
+├── ⚙️ railway.json                        # ← Railway конфигурация
+├── 🔧 force-update-railway.sh             # ← Скрипт принудительного обновления
+├── 📚 README-FULL-SYSTEM.md               # ← ЭТА ИНСТРУКЦИЯ
+│
+├── 🎨 src/                                # Frontend (Lovable)
+│   ├── pages/
+│   │   ├── TestFunctionality.tsx          # /test страница
+│   │   ├── Index.tsx                      # / главная
+│   │   ├── RPA.tsx                        # /rpa
+│   │   ├── VisualRPA.tsx                  # /visual-rpa
+│   │   ├── Accounts.tsx                   # /accounts
+│   │   └── Auth.tsx                       # /auth
+│   ├── components/
+│   │   ├── TestRPAButton.tsx              # Кнопка "Прямая проверка RPA бота"
+│   │   ├── MultiloginTokenStatus.tsx      # Статус токенов
+│   │   ├── MultiloginTestButton.tsx       # Тест Multilogin
+│   │   └── rpa/MultiloginStatus.tsx       # Статус RPA бота
+│   └── hooks/
+│       ├── useMultilogin.ts               # Хук Multilogin API
+│       ├── useRPAService.ts               # Хук RPA сервиса
+│       └── useAuth.tsx                    # Хук авторизации
+│
+├── 🗄️ supabase/                          # Backend (Supabase)
+│   ├── functions/
+│   │   ├── test-rpa-direct/index.ts       # ← ОСНОВНАЯ ФУНКЦИЯ ТЕСТИРОВАНИЯ
+│   │   ├── multilogin-token-manager/      # Управление токенами
+│   │   ├── rpa-task/index.ts              # Выполнение RPA задач
+│   │   └── multilogin-api/index.ts        # Multilogin API
+│   ├── migrations/                        # SQL миграции
+│   └── config.toml                       # Supabase конфигурация
+│
+├── 🤖 rpa-bot-cloud/                     # ← RAILWAY ИСПОЛЬЗУЕТ ЭТУ ПАПКУ
+│   ├── 📄 rpa_bot_cloud.py               # ← ОСНОВНОЙ ФАЙЛ (Railway запускает)
+│   ├── 🔌 multilogin_integration.py       # Интеграция Multilogin
+│   ├── 📋 requirements.txt                # Python зависимости
+│   ├── 🐳 Dockerfile                      # ← НЕ используется Railway
+│   ├── 🔧 enhanced_rpa_bot.py             # ← НЕ используется
+│   ├── 📊 DEPLOYMENT_TRIGGER.md           # Триггер деплоя
+│   └── 🧪 rpa_bot_multilogin.py          # ← НЕ используется
+│
+└── 📁 rpa-bot/                           # ← СТАРАЯ ВЕРСИЯ, НЕ ИСПОЛЬЗУЕТСЯ
+    ├── cloud_rpa_bot.py                  # Старый файл
+    ├── enhanced_human_rpa_bot.py         # Старый файл
+    └── ...                               # Другие старые файлы
+```
+
+### 🔄 ПОТОК ДЕПЛОЯ
+
+```
+1. Lovable (изменения кода)
+    ↓
+2. GitHub (ricobtz/account-swarm-simulator)
+    ↓ (автоматический webhook)
+3. Railway (получает изменения)
+    ↓
+4. Railway строит Docker из ./Dockerfile
+    ↓ (копирует rpa-bot-cloud/)
+5. Railway запускает python rpa_bot_cloud.py
+    ↓
+6. RPA Bot доступен на https://account-swarm-simulator-production.up.railway.app/
+```
+
+### 🧪 ТЕСТИРОВАНИЕ (ПОШАГОВАЯ ИНСТРУКЦИЯ)
+
+#### 1. Быстрая проверка системы:
+```bash
+# 1. Проверить Railway бот
+curl https://account-swarm-simulator-production.up.railway.app/health
+
+# 2. Проверить Multilogin статус
+curl https://account-swarm-simulator-production.up.railway.app/multilogin/status
+
+# 3. Тест простого RPA
+curl -X POST https://account-swarm-simulator-production.up.railway.app/execute \
+  -H "Content-Type: application/json" \
+  -d '{"task_id":"manual_test","url":"https://google.com","actions":[{"type":"screenshot"}]}'
+```
+
+#### 2. Полное тестирование через UI:
+1. Открыть https://lovable.dev (ваш проект)
+2. Перейти на `/test`
+3. Нажать **"Прямая проверка RPA бота"**
+4. Открыть F12 → Console для просмотра логов
+5. Проверить что скриншот появляется
+
+#### 3. Мониторинг логов:
+- **Railway:** https://railway.app/dashboard → account-swarm-simulator → Deployments
+- **Supabase:** https://supabase.com/dashboard/project/izmgzstdgoswlozinmyk/functions → test-rpa-direct → Logs
+- **Browser:** F12 → Console
+
+### 🚨 ЧАСТЫЕ ПРОБЛЕМЫ И РЕШЕНИЯ
+
+#### Проблема: Railway не обновляется
+**Причина:** GitHub не синхронизируется или Railway не видит изменения
+**Решение:**
+```bash
+# Запустить принудительное обновление
+./force-update-railway.sh
+
+# Или изменить любой файл чтобы создать коммит
+echo "# Force update $(date)" >> FORCE_RAILWAY_UPDATE.txt
+```
+
+#### Проблема: RPA бот возвращает ошибки
+**Причина:** Multilogin токен отсутствует или истек
+**Решение:**
+1. Проверить токены в Supabase: `/test` → "Проверить токен"
+2. Обновить токен если нужно
+3. Перезапустить тест
+
+#### Проблема: Скриншоты не отображаются
+**Причина:** Проблема с передачей base64 данных
+**Решение:**
+1. Проверить логи Railway бота
+2. Проверить логи Edge Function
+3. Убедиться что данные не обрезаются при передаче
+
+---
 
 ## 🔧 НАСТРОЙКИ ОКРУЖЕНИЯ
 
