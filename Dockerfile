@@ -1,3 +1,4 @@
+# Railway RPA Bot v2.3 - Force Update 22:55
 FROM python:3.11-slim
 
 # Обновление пакетов и установка Chrome

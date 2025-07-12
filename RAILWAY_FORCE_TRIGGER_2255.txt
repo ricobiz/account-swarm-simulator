@@ -1,0 +1,10 @@
+RAILWAY FORCE UPDATE - 2025-07-12T22:55:00Z
+GitHub Sync Issue - Creating new commit to trigger Railway
+
+Changes:
+- Updated Dockerfile comment to force new build
+- Enhanced rpa_bot_cloud.py with full Multilogin integration
+- Fixed token retrieval from Supabase Edge Functions
+- Added comprehensive action support (screenshot, navigate, click, type)
+
+This should trigger a new Railway deployment with the correct RPA bot version.
