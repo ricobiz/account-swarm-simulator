@@ -117,7 +117,7 @@ export default function TestFunctionality() {
       const task = {
         taskId: taskId,
         platform: 'test_multilogin',
-        url: 'https://httpbin.org/get',
+        url: 'https://www.google.com',
         actions: [
           { 
             type: 'navigate', 
