@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.multilogin-profiles]
 verify_jwt = false
+
+[functions.multilogin-token-manager]
+verify_jwt = false
