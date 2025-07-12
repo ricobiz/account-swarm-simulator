@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { MultiloginTokenStatus } from '@/components/MultiloginTokenStatus';
+import { EdgeFunctionLogs } from '@/components/EdgeFunctionLogs';
 
 interface TestResult {
   success: boolean;
@@ -167,6 +168,21 @@ export default function TestFunctionality() {
         </p>
       </div>
 
+      {/* Уведомление о настройке секретов */}
+      <Card className="bg-yellow-900/20 border-yellow-600/30">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="text-yellow-400">⚠️</div>
+            <div>
+              <p className="text-yellow-200 font-medium">Требуется настройка автоматической системы токенов</p>
+              <p className="text-yellow-300/80 text-sm mt-1">
+                Для работы автоматического получения токенов нужно настроить MULTILOGIN_EMAIL и MULTILOGIN_PASSWORD в секретах Supabase.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Статус токенов */}
       <MultiloginTokenStatus />
 
@@ -291,6 +307,9 @@ export default function TestFunctionality() {
           </ScrollArea>
         </CardContent>
       </Card>
+
+      {/* Edge Function Логи */}
+      <EdgeFunctionLogs />
     </div>
   );
 }
