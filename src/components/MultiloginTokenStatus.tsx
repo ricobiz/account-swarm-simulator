@@ -83,10 +83,6 @@ export const MultiloginTokenStatus: React.FC = () => {
         <CardTitle className="text-white flex items-center gap-2">
           <Key className="h-5 w-5 text-purple-400" />
           Статус Multilogin токенов
-          {/* Отладочная информация */}
-          <span className="text-xs bg-red-500 text-white px-2 py-1 rounded ml-2">
-            loading: {loading.toString()}
-          </span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
