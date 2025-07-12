@@ -71,6 +71,63 @@ export const RPATaskMonitor: React.FC = () => {
     ).join('\n');
   };
 
+  const getTaskDisplayName = (task: RPATask) => {
+    const taskData = task.task_data;
+    
+    // Если есть url, определяем по нему
+    if (taskData?.url) {
+      if (taskData.url.includes('google.com')) {
+        return 'Тест: получение скриншота Google';
+      }
+      if (taskData.url.includes('httpbin.org')) {
+        return 'Тест: проверка соединения';
+      }
+      // Для других URL показываем домен
+      try {
+        const domain = new URL(taskData.url).hostname;
+        return `Автоматизация: ${domain}`;
+      } catch {
+        return 'Автоматизация: неизвестный сайт';
+      }
+    }
+    
+    // Если есть действия, определяем по типу
+    if (taskData?.actions?.length > 0) {
+      const hasScreenshot = taskData.actions.some((action: any) => action.type === 'screenshot');
+      const hasNavigation = taskData.actions.some((action: any) => action.type === 'navigate');
+      
+      if (hasScreenshot && hasNavigation) {
+        return 'Задача: навигация и скриншот';
+      } else if (hasScreenshot) {
+        return 'Задача: получение скриншота';
+      } else if (hasNavigation) {
+        return 'Задача: навигация по сайту';
+      }
+    }
+    
+    // Если есть platform из metadata
+    if (taskData?.metadata?.platform) {
+      return `Автоматизация: ${taskData.metadata.platform}`;
+    }
+    
+    // Fallback к task_id если ничего не подошло
+    return task.task_id || 'Неизвестная задача';
+  };
+
+  const clearAllTasks = async () => {
+    try {
+      const { error } = await supabase
+        .from('rpa_tasks')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // удаляем все задачи
+      
+      if (error) throw error;
+      await fetchTasks(); // обновляем список
+    } catch (error) {
+      console.error('Ошибка очистки задач:', error);
+    }
+  };
+
   const getMultiloginInfo = (taskData: any) => {
     if (!taskData) return null;
     return {
@@ -89,16 +146,26 @@ export const RPATaskMonitor: React.FC = () => {
               <Eye className="h-5 w-5 text-blue-400" />
               Монитор RPA задач
             </div>
-            <Button
-              onClick={fetchTasks}
-              disabled={loading}
-              variant="outline"
-              size="sm"
-              className="border-gray-600 text-white hover:bg-gray-700"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Обновить
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={clearAllTasks}
+                variant="destructive"
+                size="sm"
+                className="text-xs"
+              >
+                🗑️ Очистить всё
+              </Button>
+              <Button
+                onClick={fetchTasks}
+                disabled={loading}
+                variant="outline"
+                size="sm"
+                className="border-gray-600 text-white hover:bg-gray-700"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Обновить
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -121,8 +188,8 @@ export const RPATaskMonitor: React.FC = () => {
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           {getStatusIcon(task.status)}
-                          <span className="text-white font-mono text-sm">
-                            {task.task_id || 'Неизвестная задача'}
+                          <span className="text-white text-sm font-medium">
+                            {getTaskDisplayName(task)}
                           </span>
                           <Badge className={getStatusColor(task.status)}>
                             {task.status}
