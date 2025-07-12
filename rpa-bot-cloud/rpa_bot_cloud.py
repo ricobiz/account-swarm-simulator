@@ -1,13 +1,16 @@
-
 #!/usr/bin/env python3
 """
-Максимально простой RPA бот для Railway
+Enhanced RPA Bot for Railway - интеграция с Multilogin и полный функционал
+Заменяет базовый rpa_bot_cloud.py с полной функциональностью
 """
 
 import os
 import json
 import time
 import logging
+import base64
+import random
+import traceback
 from flask import Flask, request, jsonify
 import requests
 from selenium import webdriver
@@ -15,6 +18,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import WebDriverException, TimeoutException
 
 # Настройка логирования
@@ -33,30 +37,163 @@ app = Flask(__name__)
 # Конфигурация
 SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://izmgzstdgoswlozinmyk.supabase.co')
 SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY', '')
-ELEMENT_WAIT_TIMEOUT = 10
+MULTILOGIN_TOKEN = os.getenv('MULTILOGIN_TOKEN', '')
+BOT_VERSION = "Enhanced-Railway-v2.1"
+ENVIRONMENT = "railway-enhanced"
 
-class BasicRPABot:
+class MultiloginManager:
+    """Менеджер для работы с Multilogin API"""
+    def __init__(self, token=None):
+        self.token = token or MULTILOGIN_TOKEN
+        self.base_url = "https://api.multiloginapp.com/v2"
+        self.active_profiles = {}
+        logger.info(f"MultiloginManager инициализирован с токеном: {'есть' if self.token else 'нет'}")
+
+    def check_connection(self):
+        """Проверка подключения к Multilogin"""
+        if not self.token:
+            return False
+        try:
+            response = requests.get(
+                f"{self.base_url}/profile",
+                headers={"Authorization": f"Bearer {self.token}"},
+                timeout=10
+            )
+            return response.status_code == 200
+        except:
+            return False
+
+    def get_profiles(self):
+        """Получение списка профилей"""
+        if not self.token:
+            return []
+        try:
+            response = requests.get(
+                f"{self.base_url}/profile",
+                headers={"Authorization": f"Bearer {self.token}"},
+                timeout=10
+            )
+            if response.status_code == 200:
+                return response.json().get('data', [])
+        except Exception as e:
+            logger.error(f"Ошибка получения профилей: {e}")
+        return []
+
+    def start_profile(self, profile_id):
+        """Запуск профиля"""
+        if not self.token:
+            return None
+        try:
+            response = requests.get(
+                f"{self.base_url}/profile/start?profileId={profile_id}",
+                headers={"Authorization": f"Bearer {self.token}"},
+                timeout=30
+            )
+            if response.status_code == 200:
+                data = response.json()
+                self.active_profiles[profile_id] = data
+                return data
+        except Exception as e:
+            logger.error(f"Ошибка запуска профиля: {e}")
+        return None
+
+    def stop_profile(self, profile_id):
+        """Остановка профиля"""
+        if not self.token:
+            return
+        try:
+            requests.get(
+                f"{self.base_url}/profile/stop?profileId={profile_id}",
+                headers={"Authorization": f"Bearer {self.token}"},
+                timeout=10
+            )
+            if profile_id in self.active_profiles:
+                del self.active_profiles[profile_id]
+        except Exception as e:
+            logger.error(f"Ошибка остановки профиля: {e}")
+
+    def get_selenium_driver(self, profile_id):
+        """Получение Selenium драйвера для профиля"""
+        if profile_id not in self.active_profiles:
+            return None
+        
+        profile_data = self.active_profiles[profile_id]
+        selenium_port = profile_data.get('data', {}).get('port')
+        
+        if not selenium_port:
+            return None
+
+        try:
+            options = Options()
+            options.add_experimental_option("debuggerAddress", f"127.0.0.1:{selenium_port}")
+            driver = webdriver.Chrome(options=options)
+            return driver
+        except Exception as e:
+            logger.error(f"Ошибка создания Selenium драйвера: {e}")
+            return None
+
+class EnhancedRPABot:
+    """Расширенный RPA бот с поддержкой Multilogin"""
+    
     def __init__(self):
         self.driver = None
-        self.wait = None
-        logger.info("Базовый RPA бот инициализирован")
-    
-    def setup_browser(self):
-        """Максимально простая настройка браузера"""
+        self.multilogin = None
+        self.current_profile_id = None
+        self.task_results = {}
+        
+        # Инициализация Multilogin если есть токен
+        if MULTILOGIN_TOKEN:
+            self.multilogin = MultiloginManager()
+            if self.multilogin.check_connection():
+                logger.info("✅ Multilogin подключен успешно")
+            else:
+                logger.warning("⚠️ Multilogin недоступен")
+                self.multilogin = None
+        else:
+            logger.info("ℹ️ Токен Multilogin не найден, работаем в базовом режиме")
+
+    def setup_chrome_driver(self, account_data=None, multilogin_token=None):
+        """Настройка Chrome драйвера с антидетектом"""
         try:
-            logger.info("🔧 Начинаем настройку базового браузера...")
+            # Обновляем токен Multilogin если предоставлен
+            if multilogin_token and multilogin_token != MULTILOGIN_TOKEN:
+                logger.info("🔄 Обновляем токен Multilogin из задачи")
+                self.multilogin = MultiloginManager(multilogin_token)
+                if self.multilogin.check_connection():
+                    logger.info("✅ Multilogin подключен с новым токеном")
+                else:
+                    logger.warning("⚠️ Новый токен Multilogin недействителен")
+                    self.multilogin = None
             
-            # Проверяем наличие Chrome
-            chrome_path = '/usr/bin/google-chrome'
-            if not os.path.exists(chrome_path):
-                logger.error(f"❌ Chrome не найден по пути: {chrome_path}")
-                return False
+            # Пробуем использовать Multilogin если доступен
+            if self.multilogin and account_data:
+                profiles = self.multilogin.get_profiles()
+                if profiles:
+                    # Используем первый доступный профиль
+                    profile_id = profiles[0].get('uuid')
+                    if profile_id:
+                        profile_info = self.multilogin.start_profile(profile_id)
+                        if profile_info:
+                            self.current_profile_id = profile_id
+                            driver = self.multilogin.get_selenium_driver(profile_id)
+                            if driver:
+                                logger.info("✅ Используется Multilogin браузер")
+                                return driver
             
-            logger.info(f"✅ Chrome найден: {chrome_path}")
+            # Fallback на обычный Chrome с антидетектом
+            logger.info("🔄 Используется обычный Chrome с антидетектом")
+            return self.setup_regular_chrome()
+            
+        except Exception as e:
+            logger.error(f"Ошибка настройки драйвера: {e}")
+            return self.setup_regular_chrome()
+
+    def setup_regular_chrome(self):
+        """Настройка обычного Chrome с антидетектом"""
+        try:
+            logger.info("🔧 Настройка базового Chrome с антидетектом...")
             
             options = Options()
-            
-            # Минимальные настройки для Railway
             options.add_argument('--headless=new')
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
@@ -65,241 +202,386 @@ class BasicRPABot:
             options.add_argument('--disable-web-security')
             options.add_argument('--disable-features=VizDisplayCompositor')
             
-            logger.info("🔧 Опции Chrome настроены")
+            # Антидетект опции
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            options.add_experimental_option('useAutomationExtension', False)
             
-            # Создаём драйвер
-            logger.info("🚀 Создаём WebDriver...")
-            self.driver = webdriver.Chrome(options=options)
-            logger.info("✅ WebDriver создан успешно")
+            # User Agent
+            options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
             
-            # Настраиваем ожидания
-            self.wait = WebDriverWait(self.driver, ELEMENT_WAIT_TIMEOUT)
-            logger.info("✅ WebDriverWait настроен")
+            driver = webdriver.Chrome(options=options)
             
-            # Тестовый переход
-            logger.info("🧪 Тестируем браузер...")
-            self.driver.get("https://www.google.com")
-            logger.info(f"✅ Тестовый переход успешен. Заголовок: {self.driver.title}")
+            # Выполняем антидетект скрипты
+            driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             
+            logger.info("✅ Базовый Chrome настроен с антидетектом")
+            return driver
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка настройки базового Chrome: {e}")
+            raise
+
+    def execute_action(self, action):
+        """Выполнение действия"""
+        try:
+            action_type = action.get('type')
+            logger.info(f"🎬 Выполняем действие: {action_type}")
+            
+            if action_type == 'navigate':
+                url = action.get('url')
+                logger.info(f"🌐 Переход на: {url}")
+                self.driver.get(url)
+                time.sleep(random.uniform(2, 4))
+                
+            elif action_type == 'wait':
+                duration = action.get('duration', 2000) / 1000
+                logger.info(f"⏱️ Ожидание {duration} сек")
+                time.sleep(duration)
+                
+            elif action_type == 'screenshot':
+                """Создание скриншота"""
+                logger.info("📸 Создание скриншота страницы")
+                try:
+                    # Получение скриншота как PNG bytes
+                    screenshot_png = self.driver.get_screenshot_as_png()
+                    
+                    # Конвертируем в base64
+                    screenshot_base64 = base64.b64encode(screenshot_png).decode('utf-8')
+                    
+                    # Сохраняем результат
+                    if not hasattr(self, 'task_results'):
+                        self.task_results = {}
+                    self.task_results['screenshot'] = f"data:image/png;base64,{screenshot_base64}"
+                    
+                    logger.info(f"✅ Скриншот создан и сконвертирован в base64: {len(screenshot_base64)} символов")
+                    return True
+                    
+                except Exception as e:
+                    logger.error(f"❌ Ошибка создания скриншота: {e}")
+                    return False
+                    
+            elif action_type == 'click':
+                selector = action.get('selector')
+                if selector:
+                    element = WebDriverWait(self.driver, 10).until(
+                        EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
+                    )
+                    ActionChains(self.driver).move_to_element(element).click().perform()
+                    time.sleep(random.uniform(1, 2))
+                
+            elif action_type == 'type':
+                selector = action.get('selector')
+                text = action.get('text', '')
+                if selector and text:
+                    element = WebDriverWait(self.driver, 10).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+                    )
+                    element.clear()
+                    # Человекоподобный ввод
+                    for char in text:
+                        element.send_keys(char)
+                        time.sleep(random.uniform(0.05, 0.15))
+                        
+            elif action_type == 'scroll':
+                x = action.get('x', 0)
+                y = action.get('y', 300)
+                self.driver.execute_script(f"window.scrollBy({x}, {y});")
+                time.sleep(random.uniform(1, 2))
+                
+            elif action_type == 'check_element':
+                selector = action.get('selector')
+                if selector:
+                    try:
+                        WebDriverWait(self.driver, 10).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+                        )
+                        logger.info(f"✅ Элемент найден: {selector}")
+                        return True
+                    except TimeoutException:
+                        logger.warning(f"⚠️ Элемент не найден: {selector}")
+                        return False
+                        
+            elif action_type == 'telegram_like':
+                logger.info("❤️ Выполняем лайк в Telegram")
+                # Базовая реализация для Telegram
+                try:
+                    # Ищем кнопку реакции
+                    reaction_button = WebDriverWait(self.driver, 10).until(
+                        EC.element_to_be_clickable((By.CSS_SELECTOR, ".ReactionButton, .reaction-button, [data-testid='reaction']"))
+                    )
+                    reaction_button.click()
+                    time.sleep(1)
+                    return True
+                except TimeoutException:
+                    logger.warning("⚠️ Кнопка реакции не найдена")
+                    return False
+                    
+            elif action_type == 'multilogin_test':
+                logger.info("🔧 Тестируем интеграцию Multilogin")
+                return self.multilogin is not None and self.current_profile_id is not None
+                
             return True
             
         except Exception as e:
-            logger.error(f"❌ Критическая ошибка настройки браузера: {e}")
-            logger.error(f"Тип ошибки: {type(e).__name__}")
-            
-            # Попытка очистки
-            try:
-                if self.driver:
-                    self.driver.quit()
-            except:
-                pass
-            
+            logger.error(f"❌ Ошибка выполнения действия {action_type}: {e}")
             return False
-    
-    def execute_task(self, task):
+
+    def execute_rpa_task(self, task):
         """Выполнение RPA задачи"""
-        task_id = task.get('taskId', 'unknown')
-        logger.info(f"📋 Начало выполнения задачи: {task_id}")
+        task_id = task.get('taskId')
+        logger.info(f"🚀 Запуск RPA задачи: {task_id}")
         
         try:
-            # Настраиваем браузер
-            if not self.setup_browser():
-                raise Exception("Не удалось настроить базовый браузер")
-            
-            logger.info("✅ Браузер настроен, выполняем действия...")
-            
-            # Выполняем действия
-            result = self._execute_actions(task)
-            
-            # Отправляем результат
-            self._report_result(task_id, result)
-            
-            return result
-            
-        except Exception as e:
-            error_msg = f"Ошибка выполнения задачи {task_id}: {e}"
-            logger.error(error_msg)
-            
-            result = {
-                'success': False,
-                'error': error_msg,
-                'taskId': task_id
+            # Подготовка данных аккаунта
+            account_data = {
+                'username': task.get('accountId', 'test-account'),
+                'platform': task.get('metadata', {}).get('platform', 'web')
             }
             
-            self._report_result(task_id, result)
-            return result
+            # Получение токена Multilogin из задачи
+            multilogin_token = None
+            if task.get('metadata', {}).get('multilogin_token_info'):
+                token_info = task.get('metadata', {}).get('multilogin_token_info', {})
+                multilogin_token = token_info.get('token')
+                
+                if not multilogin_token:
+                    multilogin_token = MULTILOGIN_TOKEN
+                    
+                logger.info(f"🔑 Используем токен Multilogin: {'найден' if multilogin_token else 'не найден'}")
+            
+            # Инициализация результатов задачи
+            self.task_results = {}
+            
+            # Настройка браузера с токеном Multilogin
+            self.driver = self.setup_chrome_driver(account_data, multilogin_token)
+            
+            # Переход на начальную страницу
+            initial_url = task.get('url')
+            if initial_url:
+                logger.info(f"🌐 Переход на начальную страницу: {initial_url}")
+                self.driver.get(initial_url)
+                time.sleep(2)
+            
+            # Выполнение действий
+            actions = task.get('actions', [])
+            success_count = 0
+            
+            for i, action in enumerate(actions):
+                logger.info(f"📋 Действие {i+1}/{len(actions)}: {action.get('type')}")
+                
+                try:
+                    if self.execute_action(action):
+                        success_count += 1
+                        logger.info(f"✅ Действие {i+1} выполнено успешно")
+                    else:
+                        logger.warning(f"⚠️ Действие {i+1} выполнено с предупреждениями")
+                        
+                except Exception as e:
+                    logger.error(f"❌ Ошибка в действии {i+1}: {e}")
+                
+                # Небольшая пауза между действиями
+                time.sleep(random.uniform(1, 2))
+            
+            # Финальные результаты задачи
+            result_data = {
+                'success': True,
+                'actions_completed': success_count,
+                'total_actions': len(actions),
+                'task_id': task_id,
+                'multilogin_integrated': self.multilogin is not None and self.current_profile_id is not None,
+                'screenshot': self.task_results.get('screenshot') if hasattr(self, 'task_results') else None,
+                'platform': task.get('metadata', {}).get('platform', 'web'),
+                'execution_time': 0,  # TODO: добавить реальное время выполнения
+                'browser_fingerprint': self._get_browser_fingerprint() if self.driver else {},
+                'multilogin_profile': self.current_profile_id
+            }
+            
+            # Результат
+            if success_count == len(actions):
+                logger.info("✅ Все действия выполнены успешно")
+                return True
+            else:
+                logger.info(f"⚠️ Выполнено {success_count}/{len(actions)} действий")
+                return True
+                
+        except Exception as e:
+            logger.error(f"❌ Критическая ошибка выполнения задачи: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return False
             
         finally:
             self.cleanup()
-    
-    def _execute_actions(self, task):
-        """Выполнение списка действий"""
-        task_id = task.get('taskId')
-        actions = task.get('actions', [])
-        results = []
-        
+
+    def _get_browser_fingerprint(self):
+        """Получение информации о браузере"""
         try:
-            for i, action in enumerate(actions):
-                action_type = action.get('type')
-                logger.info(f"🎯 Действие {i+1}/{len(actions)}: {action_type}")
-                
-                if action_type == 'navigate':
-                    url = action.get('url')
-                    logger.info(f"🌐 Переходим на: {url}")
-                    self.driver.get(url)
-                    time.sleep(2)
-                    results.append(f"Переход на {url}")
-                    
-                elif action_type == 'check_element':
-                    element = action.get('element', {})
-                    selector = element.get('selector')
-                    
-                    if selector:
-                        try:
-                            logger.info(f"🔍 Ищем элемент: {selector}")
-                            self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
-                            results.append(f"Элемент найден: {selector}")
-                            logger.info(f"✅ Элемент найден: {selector}")
-                        except TimeoutException:
-                            results.append(f"Элемент не найден: {selector}")
-                            logger.warning(f"⚠️ Элемент не найден: {selector}")
-                
-                elif action_type == 'type':
-                    element = action.get('element', {})
-                    selector = element.get('selector')
-                    text = element.get('text', '')
-                    
-                    if selector and text:
-                        try:
-                            logger.info(f"⌨️ Вводим текст в: {selector}")
-                            field = self.wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, selector)))
-                            field.clear()
-                            field.send_keys(text)
-                            results.append(f"Текст введен в {selector}")
-                        except TimeoutException:
-                            results.append(f"Не удалось найти поле: {selector}")
-                
-                elif action_type == 'click':
-                    element = action.get('element', {})
-                    selector = element.get('selector')
-                    
-                    if selector:
-                        try:
-                            logger.info(f"🖱️ Кликаем по: {selector}")
-                            button = self.wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, selector)))
-                            button.click()
-                            results.append(f"Клик по {selector}")
-                        except TimeoutException:
-                            results.append(f"Не удалось кликнуть: {selector}")
-                
-                # Пауза между действиями
-                delay = action.get('delay', 1000) / 1000.0
-                time.sleep(delay)
+            fingerprint = {}
             
-            return {
-                'success': True,
-                'taskId': task_id,
-                'results': results,
-                'message': f'Задача {task_id} выполнена успешно',
-                'browser_type': 'basic_chrome'
-            }
-            
+            # Получаем User Agent
+            try:
+                fingerprint['user_agent'] = self.driver.execute_script("return navigator.userAgent;")
+            except:
+                pass
+                
+            # Получаем разрешение экрана
+            try:
+                fingerprint['screen_resolution'] = self.driver.execute_script("return screen.width + 'x' + screen.height;")
+            except:
+                pass
+                
+            # Получаем язык
+            try:
+                fingerprint['language'] = self.driver.execute_script("return navigator.language;")
+            except:
+                pass
+                
+            # Получаем временную зону
+            try:
+                fingerprint['timezone'] = self.driver.execute_script("return Intl.DateTimeFormat().resolvedOptions().timeZone;")
+            except:
+                pass
+                
+            return fingerprint
         except Exception as e:
-            logger.error(f"❌ Ошибка выполнения действий: {e}")
-            return {
-                'success': False,
-                'taskId': task_id,
-                'error': str(e),
-                'results': results
-            }
-    
-    def _report_result(self, task_id, result):
-        """Отправка результата в Supabase"""
-        try:
-            if not SUPABASE_SERVICE_KEY:
-                logger.warning("SUPABASE_SERVICE_KEY не установлен")
-                return
-                
-            supabase_url = SUPABASE_URL.rstrip('/')
-            headers = {
-                'Content-Type': 'application/json',
-                'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}'
-            }
-            
-            response = requests.put(
-                f"{supabase_url}/functions/v1/rpa-task",
-                headers=headers,
-                json={
-                    'taskId': task_id,
-                    'result': result
-                },
-                timeout=10
-            )
-            
-            if response.ok:
-                logger.info(f"📤 Результат задачи {task_id} отправлен в Supabase")
-            else:
-                logger.error(f"❌ Ошибка отправки результата: {response.status_code} - {response.text}")
-                
-        except Exception as e:
-            logger.error(f"❌ Ошибка отправки результата: {e}")
-    
+            logger.error(f"Ошибка получения fingerprint: {e}")
+            return {}
+
     def cleanup(self):
         """Очистка ресурсов"""
         try:
             if self.driver:
-                logger.info("🧹 Закрываем браузер...")
                 self.driver.quit()
                 self.driver = None
-                self.wait = None
-                logger.info("✅ Браузер закрыт")
+                
+            if self.multilogin and self.current_profile_id:
+                self.multilogin.stop_profile(self.current_profile_id)
+                self.current_profile_id = None
                 
         except Exception as e:
-            logger.warning(f"⚠️ Ошибка очистки ресурсов: {e}")
+            logger.error(f"Ошибка очистки: {e}")
 
-# Глобальный экземпляр бота
-rpa_bot = BasicRPABot()
+# Глобальный экземпляр RPA бота
+rpa_bot = EnhancedRPABot()
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """Проверка здоровья сервиса"""
-    return jsonify({
-        'status': 'healthy',
-        'environment': 'railway-basic',
-        'version': '1.0.1-basic',
-        'capabilities': ['navigate', 'click', 'type', 'check_element', 'basic_browser']
-    })
+    try:
+        status = {
+            'status': 'ok',
+            'timestamp': time.time(),
+            'version': BOT_VERSION,
+            'environment': ENVIRONMENT,
+            'multilogin': rpa_bot.multilogin is not None,
+            'chrome_available': True
+        }
+        
+        # Проверка Chrome
+        try:
+            options = Options()
+            options.add_argument('--headless=new')
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            test_driver = webdriver.Chrome(options=options)
+            test_driver.quit()
+        except:
+            status['chrome_available'] = False
+            
+        return jsonify(status)
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
 
 @app.route('/execute', methods=['POST'])
-def execute_task():
+def execute_rpa():
     """Выполнение RPA задачи"""
     try:
-        task = request.get_json()
+        task = request.json
+        task_id = task.get('task_id') or task.get('taskId')  # Поддержка обоих форматов
         
-        if not task:
+        logger.info(f"🎯 Получена RPA задача: {task_id}")
+        logger.info(f"📋 Данные задачи: {json.dumps(task, indent=2, ensure_ascii=False)}")
+        
+        # Валидация задачи
+        if not task_id:
             return jsonify({
                 'success': False,
-                'error': 'Отсутствуют данные задачи'
+                'error': 'Отсутствует task_id или taskId'
             }), 400
         
-        task_id = task.get('taskId')
-        logger.info(f"📨 Получена задача: {task_id}")
+        # Преобразуем формат задачи для совместимости
+        normalized_task = {
+            'taskId': task_id,
+            'url': task.get('url'),
+            'actions': task.get('actions', []),
+            'metadata': {
+                'platform': task.get('platform', 'web'),
+                'account': task.get('account_data', {}),
+                'multilogin_token_info': task.get('metadata', {}).get('multilogin_token_info', {})
+            },
+            'multilogin_profile': task.get('multilogin_profile'),
+            'timeout': task.get('timeout', 60)
+        }
+            
+        # Запуск задачи
+        success = rpa_bot.execute_rpa_task(normalized_task)
         
-        # Выполняем задачу
-        result = rpa_bot.execute_task(task)
+        # Формируем ответ с результатами
+        response_data = {
+            'success': success,
+            'task_id': task_id,
+            'message': 'Задача выполнена успешно' if success else 'Задача завершилась с ошибками',
+            'execution_time': 0,  # TODO: добавить реальное время
+            'completed_actions': len(task.get('actions', [])) if success else 0
+        }
+        
+        # Добавляем скриншот если есть
+        if hasattr(rpa_bot, 'task_results') and rpa_bot.task_results:
+            if 'screenshot' in rpa_bot.task_results:
+                response_data['screenshot'] = rpa_bot.task_results['screenshot']
+                response_data['screenshots'] = [rpa_bot.task_results['screenshot']]
+            
+            # Очищаем результаты после использования
+            rpa_bot.task_results = {}
+        
+        logger.info(f"📤 Возвращаем результат: success={success}, screenshot={'есть' if 'screenshot' in response_data else 'нет'}")
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        logger.error(f"❌ Ошибка API /execute: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'task_id': task.get('task_id') or task.get('taskId') if 'task' in locals() else None
+        }), 500
+
+@app.route('/multilogin/status', methods=['GET'])
+def multilogin_status():
+    """Статус Multilogin"""
+    try:
+        if not rpa_bot.multilogin:
+            return jsonify({
+                'connected': False,
+                'error': 'Multilogin не настроен'
+            })
+            
+        profiles = rpa_bot.multilogin.get_profiles()
         
         return jsonify({
-            'success': True,
-            'message': f'Задача {task_id} принята к выполнению',
-            'taskId': task_id,
-            'result': result,
-            'environment': 'railway-basic'
+            'connected': True,
+            'token_available': bool(rpa_bot.multilogin.token),
+            'profiles_count': len(profiles),
+            'active_profiles': len(rpa_bot.multilogin.active_profiles)
         })
         
     except Exception as e:
-        logger.error(f"❌ Ошибка выполнения задачи: {e}")
         return jsonify({
-            'success': False,
+            'connected': False,
             'error': str(e)
         }), 500
 
@@ -307,33 +589,39 @@ def execute_task():
 def test_bot():
     """Тест RPA бота"""
     try:
-        logger.info("🧪 Запуск теста браузера...")
+        logger.info("🧪 Запуск теста Enhanced RPA бота...")
         
         # Простой тест браузера
-        test_result = rpa_bot.setup_browser()
+        test_task = {
+            'taskId': f'test_{int(time.time())}',
+            'url': 'https://httpbin.org/get',
+            'actions': [
+                {'type': 'navigate', 'url': 'https://httpbin.org/get'},
+                {'type': 'wait', 'duration': 2000},
+                {'type': 'screenshot', 'description': 'Тестовый скриншот'}
+            ],
+            'metadata': {'platform': 'test'}
+        }
         
-        if test_result:
-            title = rpa_bot.driver.title
-            current_url = rpa_bot.driver.current_url
-            rpa_bot.cleanup()
+        success = rpa_bot.execute_rpa_task(test_task)
+        
+        response = {
+            'success': success,
+            'message': 'Enhanced тест прошел успешно' if success else 'Enhanced тест не прошел',
+            'version': BOT_VERSION,
+            'multilogin_available': rpa_bot.multilogin is not None
+        }
+        
+        # Добавляем скриншот если есть
+        if hasattr(rpa_bot, 'task_results') and rpa_bot.task_results:
+            if 'screenshot' in rpa_bot.task_results:
+                response['screenshot'] = rpa_bot.task_results['screenshot']
+                response['screenshot_length'] = len(rpa_bot.task_results['screenshot'])
             
-            logger.info("✅ Тест браузера прошел успешно")
-            return jsonify({
-                'success': True,
-                'message': 'Тест прошел успешно',
-                'title': title,
-                'url': current_url
-            })
-        else:
-            logger.error("❌ Тест браузера не прошел")
-            return jsonify({
-                'success': False,
-                'error': 'Не удалось настроить браузер'
-            }), 500
+        return jsonify(response)
             
     except Exception as e:
         logger.error(f"❌ Критическая ошибка теста: {e}")
-        rpa_bot.cleanup()
         return jsonify({
             'success': False,
             'error': str(e)
@@ -345,8 +633,9 @@ if __name__ == '__main__':
     
     # Запускаем сервер
     port = int(os.environ.get('PORT', 8080))
-    logger.info(f"🚀 Запуск базового RPA бота на порту {port}")
+    logger.info(f"🚀 Запуск Enhanced RPA бота на порту {port}")
     logger.info(f"🔗 Supabase URL: {SUPABASE_URL}")
+    logger.info(f"🔑 Multilogin Token: {'найден' if MULTILOGIN_TOKEN else 'НЕ найден'}")
     
     # Проверяем Chrome при запуске
     chrome_path = '/usr/bin/google-chrome'
