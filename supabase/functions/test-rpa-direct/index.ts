@@ -78,7 +78,16 @@ serve(async (req) => {
 
       if (rpaResponse.ok) {
         rpaTestResult = await rpaResponse.json()
-        console.log('✅ RPA тест успешен:', rpaTestResult)
+        console.log('✅ RPA тест успешен:', { 
+          success: rpaTestResult.success,
+          screenshot_available: !!rpaTestResult.screenshot,
+          screenshot_length: rpaTestResult.screenshot ? rpaTestResult.screenshot.length : 0
+        })
+        
+        // Обрезаем скриншот для логов (слишком длинный)
+        if (rpaTestResult.screenshot) {
+          console.log(`📸 Скриншот получен: ${rpaTestResult.screenshot.substring(0, 100)}...`)
+        }
       } else {
         const errorText = await rpaResponse.text()
         console.log('❌ RPA тест failed:', rpaResponse.status, errorText)

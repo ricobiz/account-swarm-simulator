@@ -10,6 +10,7 @@ import type { RPATask } from '@/types/rpa';
 export const TestRPAButton: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [testLog, setTestLog] = useState<string[]>([]);
+  const [screenshotData, setScreenshotData] = useState<string | null>(null);
   const { submitRPATask, waitForRPACompletion } = useRPAService();
   const { toast } = useToast();
 
@@ -304,10 +305,14 @@ export const TestRPAButton: React.FC = () => {
                 addLog(`🧪 RPA Test Success: ${data.rpa_test?.success || false}`);
                 addLog(`🔗 Multilogin Connected: ${data.multilogin_status?.connected || false}`);
                 
+                
                 if (data.rpa_test?.screenshot) {
                   addLog('📸 Скриншот получен!');
+                  // Сохраняем скриншот для отображения
+                  setScreenshotData(data.rpa_test.screenshot);
                 } else {
                   addLog('❌ Скриншот не получен');
+                  setScreenshotData(null);
                 }
                 
                 if (data.rpa_test?.error) {
@@ -393,6 +398,19 @@ export const TestRPAButton: React.FC = () => {
                 <div key={index} className="font-mono">{log}</div>
               ))}
             </div>
+          </div>
+        )}
+        
+        {/* Отображение скриншота */}
+        {screenshotData && (
+          <div className="mt-4">
+            <h4 className="text-sm font-medium text-gray-300 mb-2">📸 Скриншот:</h4>
+            <img 
+              src={screenshotData} 
+              alt="RPA Screenshot" 
+              className="max-w-full h-auto border border-gray-600 rounded"
+              style={{ maxHeight: '300px' }}
+            />
           </div>
         )}
       </CardContent>
