@@ -308,10 +308,12 @@ export const TestRPAButton: React.FC = () => {
                 
                 if (data.rpa_test?.screenshot) {
                   addLog('📸 Скриншот получен!');
+                  addLog(`📏 Размер скриншота: ${data.rpa_test.screenshot.length} символов`);
                   // Сохраняем скриншот для отображения
                   setScreenshotData(data.rpa_test.screenshot);
                 } else {
                   addLog('❌ Скриншот не получен');
+                  addLog(`🔍 Данные RPA теста: ${JSON.stringify(Object.keys(data.rpa_test || {}))}`);
                   setScreenshotData(null);
                 }
                 
@@ -400,6 +402,25 @@ export const TestRPAButton: React.FC = () => {
             </div>
           </div>
         )}
+        
+        {/* Отображение скриншота */}
+        {screenshotData ? (
+          <div className="mt-4 p-3 bg-gray-800 rounded-lg">
+            <h4 className="text-sm font-medium text-green-400 mb-2">📸 Скриншот Google:</h4>
+            <img 
+              src={screenshotData} 
+              alt="RPA Screenshot Google" 
+              className="max-w-full h-auto border border-gray-600 rounded shadow-lg"
+              style={{ maxHeight: '400px' }}
+              onLoad={() => addLog('✅ Скриншот загружен в интерфейс')}
+              onError={() => addLog('❌ Ошибка загрузки скриншота в интерфейс')}
+            />
+          </div>
+        ) : testLog.some(log => log.includes('Скриншот получен')) ? (
+          <div className="mt-4 p-3 bg-red-900/20 border border-red-600/30 rounded-lg">
+            <p className="text-red-400 text-sm">⚠️ Скриншот получен но не отображается</p>
+          </div>
+        ) : null}
         
         {/* Отображение скриншота */}
         {screenshotData && (
