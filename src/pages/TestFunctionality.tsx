@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { MultiloginTokenStatus } from '@/components/MultiloginTokenStatus';
 import { EdgeFunctionLogs } from '@/components/EdgeFunctionLogs';
+import { RPATaskMonitor } from '@/components/RPATaskMonitor';
 
 interface TestResult {
   success: boolean;
@@ -368,6 +369,9 @@ export default function TestFunctionality() {
 
       {/* Edge Function Логи */}
       <EdgeFunctionLogs />
+
+      {/* Монитор RPA задач */}
+      <RPATaskMonitor />
     </div>
   );
 }
