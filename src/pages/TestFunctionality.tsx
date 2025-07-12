@@ -155,7 +155,24 @@ export default function TestFunctionality() {
       };
       
       log(`📋 Создана задача ID: ${taskId}`);
-      log('🔄 Шаг 3: Отправляем задачу RPA боту через Edge Function...');
+      
+      // Сохраняем задачу в базу данных перед отправкой
+      log('💾 Шаг 3: Сохраняем задачу в базу данных...');
+      const { error: saveError } = await supabase
+        .from('rpa_tasks')
+        .insert({
+          task_id: taskId,
+          task_data: task,
+          status: 'pending'
+        });
+
+      if (saveError) {
+        log(`❌ Ошибка сохранения задачи: ${saveError.message}`, 'error');
+      } else {
+        log('✅ Задача сохранена в базу данных');
+      }
+      
+      log('🔄 Шаг 4: Отправляем задачу RPA боту через Edge Function...');
       
       const { data, error } = await supabase.functions.invoke('rpa-task', {
         body: { task }
