@@ -239,6 +239,20 @@ export const RPATaskMonitor: React.FC = () => {
                           </div>
                         )}
 
+                        {/* Отладка - показываем все поля result_data */}
+                        {task.result_data && (
+                          <div>
+                            <h4 className="font-medium mb-2">🔍 Отладка result_data:</h4>
+                            <div className="text-xs bg-muted p-2 rounded">
+                              <div>• screenshot: {task.result_data.screenshot ? '✅ Есть' : '❌ Нет'}</div>
+                              <div>• success: {task.result_data.success ? '✅ Да' : '❌ Нет'}</div>
+                              <div>• message: {task.result_data.message || 'Нет'}</div>
+                              <div>• data.screenshot_urls: {task.result_data.data?.screenshot_urls ? `${task.result_data.data.screenshot_urls.length} шт.` : 'Нет'}</div>
+                              <div>• Все ключи: {Object.keys(task.result_data).join(', ')}</div>
+                            </div>
+                          </div>
+                        )}
+
                         {task.result_data && (
                           <div>
                             <h4 className="font-medium mb-2">Результат:</h4>
