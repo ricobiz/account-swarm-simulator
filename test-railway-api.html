@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Railway API Test</title>
+</head>
+<body>
+    <h1>Railway Projects and Services</h1>
+    <div id="output"></div>
+    
+    <script>
+    const RAILWAY_TOKEN = 'df5658c8-57a0-4aef-b8ca-e374013e5ead';
+    const RAILWAY_API = 'https://backboard.railway.com/graphql/v2';
+
+    const GET_PROJECTS_QUERY = `
+      query {
+        projects {
+          edges {
+            node {
+              id
+              name
+              services {
+                edges {
+                  node {
+                    id
+                    name
+                    domains {
+                      serviceDomains {
+                        domain
+                      }
+                      customDomains {
+                        domain
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    async function fetchRailwayProjects() {
+      const output = document.getElementById('output');
+      
+      try {
+        output.innerHTML = '<p>🔄 Загрузка проектов Railway...</p>';
+        
+        const response = await fetch(RAILWAY_API, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${RAILWAY_TOKEN}`,
+          },
+          body: JSON.stringify({
+            query: GET_PROJECTS_QUERY
+          })
+        });
+
+        const data = await response.json();
+        
+        if (data.errors) {
+          output.innerHTML = `<p style="color: red">❌ Ошибка GraphQL: ${JSON.stringify(data.errors)}</p>`;
+          return;
+        }
+
+        let html = '<h2>🚀 Railway Projects and Services:</h2>';
+        let rpaServices = '<h2>🤖 RPA Related Services:</h2>';
+        
+        data.data.projects.edges.forEach(({ node: project }) => {
+          html += `<h3>📂 Project: ${project.name}</h3>`;
+          
+          project.services.edges.forEach(({ node: service }) => {
+            html += `<div style="margin-left: 20px;">`;
+            html += `<strong>🔧 Service: ${service.name}</strong><br>`;
+            
+            // Service domains
+            if (service.domains.serviceDomains.length > 0) {
+              service.domains.serviceDomains.forEach(domain => {
+                const fullUrl = `https://${domain.domain}`;
+                html += `&nbsp;&nbsp;🌐 Service Domain: <a href="${fullUrl}" target="_blank">${fullUrl}</a><br>`;
+                
+                // Check if this is RPA related
+                const serviceName = service.name.toLowerCase();
+                if (serviceName.includes('rpa') || serviceName.includes('bot') || serviceName.includes('automation') || serviceName.includes('cloud')) {
+                  rpaServices += `<div style="background: #f0f8ff; padding: 10px; margin: 10px 0; border-left: 4px solid #007acc;">`;
+                  rpaServices += `<strong>🎯 FOUND: ${service.name}</strong><br>`;
+                  rpaServices += `Project: ${project.name}<br>`;
+                  rpaServices += `<strong>🚀 ENDPOINT: ${fullUrl}</strong><br>`;
+                  rpaServices += `<em>Add this to Supabase secrets as RPA_BOT_ENDPOINT</em>`;
+                  rpaServices += `</div>`;
+                }
+              });
+            }
+            
+            // Custom domains
+            if (service.domains.customDomains.length > 0) {
+              service.domains.customDomains.forEach(domain => {
+                const fullUrl = `https://${domain.domain}`;
+                html += `&nbsp;&nbsp;🎯 Custom Domain: <a href="${fullUrl}" target="_blank">${fullUrl}</a><br>`;
+              });
+            }
+            
+            html += `</div><br>`;
+          });
+        });
+
+        output.innerHTML = html + rpaServices;
+
+      } catch (error) {
+        output.innerHTML = `<p style="color: red">❌ Ошибка: ${error.message}</p>`;
+        console.error('Error:', error);
+      }
+    }
+
+    // Auto-execute when page loads
+    window.onload = fetchRailwayProjects;
+    </script>
+</body>
+</html>
