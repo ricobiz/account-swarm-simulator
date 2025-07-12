@@ -1,6 +1,6 @@
-RAILWAY FORCE UPDATE - 2025-07-12T15:45:00Z
-Version: Enhanced-Multilogin-v2.1-FIXED
-Trigger: force-update-multilogin-api
+RAILWAY FORCE UPDATE - 2025-07-12T15:50:00Z
+Version: Enhanced-Multilogin-v2.2-TOKEN-FIX
+Trigger: force-update-token-retrieval
 
 CRITICAL FIXES:
 - Fixed Multilogin API connection in Railway deployment  

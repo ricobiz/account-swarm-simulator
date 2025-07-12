@@ -1,9 +1,9 @@
-// Railway Force Update - 2025-07-12T15:35:00Z
+// Railway Force Update - 2025-07-12T15:50:00Z
 // This file modification should trigger Railway redeployment
 
 export const RAILWAY_UPDATE_INFO = {
-  timestamp: '2025-07-12T15:35:00Z',
-  version: 'RPA-Enhanced-Multilogin-v2.1',
+  timestamp: '2025-07-12T15:50:00Z',
+  version: 'RPA-Enhanced-Multilogin-v2.2-TOKEN-FIX',
   trigger: 'force-update',
   changes: [
     'Fixed Multilogin token handling in RPA bot',
