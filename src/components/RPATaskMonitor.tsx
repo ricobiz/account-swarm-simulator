@@ -158,6 +158,21 @@ export const RPATaskMonitor: React.FC = () => {
                             </div>
                           )}
                           
+                          {/* Скриншот если есть */}
+                          {task.result_data?.screenshot && (
+                            <div>
+                              <h4 className="text-white font-medium mb-2">📸 Скриншот результата:</h4>
+                              <div className="bg-gray-800 p-2 rounded border border-gray-600">
+                                <img 
+                                  src={task.result_data.screenshot} 
+                                  alt="RPA Task Screenshot"
+                                  className="max-w-full h-auto rounded border border-gray-600"
+                                  style={{ maxHeight: '300px' }}
+                                />
+                              </div>
+                            </div>
+                          )}
+
                           {task.result_data && (
                             <div>
                               <h4 className="text-white font-medium mb-2">Результат:</h4>

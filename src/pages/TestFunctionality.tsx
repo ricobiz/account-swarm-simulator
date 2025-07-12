@@ -117,21 +117,22 @@ export default function TestFunctionality() {
       const task = {
         taskId: taskId,
         platform: 'test_multilogin',
-        url: 'https://httpbin.org/get',
+        url: 'https://www.google.com',
         actions: [
           { 
             type: 'navigate', 
-            url: 'https://httpbin.org/get',
-            description: 'Переходим на тестовую страницу'
+            url: 'https://www.google.com',
+            description: 'Переходим на Google'
           },
           { 
             type: 'wait', 
-            duration: 2000,
-            description: 'Ждем загрузки страницы (2 сек)'
+            duration: 3000,
+            description: 'Ждем полной загрузки Google (3 сек)'
           },
           { 
             type: 'screenshot',
-            description: 'Делаем скриншот для проверки'
+            description: 'Делаем скриншот Google для проверки',
+            save_screenshot: true
           },
           {
             type: 'multilogin_test',
