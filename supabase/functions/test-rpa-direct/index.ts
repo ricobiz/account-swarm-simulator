@@ -91,7 +91,7 @@ serve(async (req) => {
       console.log(`🔑 Используем токен: ${multiloginToken ? 'ДА' : 'НЕТ'}`)
       
       const testTask = {
-        task_id: `direct_test_${Date.now()}`,
+        taskId: `direct_test_${Date.now()}`, // Исправлено: taskId вместо task_id
         url: 'https://www.google.com',
         actions: [
           { type: 'navigate', url: 'https://www.google.com', description: 'Переходим на Google' },
