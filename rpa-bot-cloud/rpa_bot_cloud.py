@@ -585,6 +585,16 @@ def multilogin_status():
             'error': str(e)
         }), 500
 
+@app.route('/multilogin/st', methods=['GET'])
+def multilogin_simple_status():
+    """Простой статус Multilogin (для совместимости)"""
+    try:
+        if not rpa_bot.multilogin:
+            return jsonify({'status': 'disconnected'})
+        return jsonify({'status': 'connected'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 @app.route('/test', methods=['GET'])
 def test_bot():
     """Тест RPA бота"""
