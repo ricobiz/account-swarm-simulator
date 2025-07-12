@@ -19,6 +19,7 @@ from selenium.common.exceptions import TimeoutException, WebDriverException
 import time
 import json
 import requests
+import random
 from multilogin_integration import MultiloginManager
 from config import *
 
@@ -295,6 +296,40 @@ class EnhancedRPABot:
                     logger.warning(f"⚠️ Элемент не найден: {selector}")
                     return False
                     
+            elif action_type == 'screenshot':
+                """Создание скриншота"""
+                logger.info("📸 Создание скриншота страницы")
+                try:
+                    # Делаем скриншот
+                    screenshot_path = f"/tmp/screenshot_{int(time.time())}.png"
+                    self.driver.save_screenshot(screenshot_path)
+                    
+                    # Конвертируем в base64
+                    import base64
+                    with open(screenshot_path, "rb") as img_file:
+                        screenshot_base64 = base64.b64encode(img_file.read()).decode('utf-8')
+                    
+                    # Сохраняем скриншот в результаты задачи
+                    if not hasattr(self, 'task_results'):
+                        self.task_results = {}
+                    
+                    self.task_results['screenshot'] = f"data:image/png;base64,{screenshot_base64}"
+                    self.task_results['screenshot_path'] = screenshot_path
+                    
+                    logger.info(f"✅ Скриншот создан и сохранен: {len(screenshot_base64)} байт")
+                    
+                    # Удаляем временный файл
+                    import os
+                    try:
+                        os.remove(screenshot_path)
+                    except:
+                        pass
+                        
+                    return True
+                except Exception as e:
+                    logger.error(f"❌ Ошибка создания скриншота: {e}")
+                    return False
+                    
             return True
             
         except Exception as e:
@@ -468,31 +503,63 @@ def execute_rpa():
     """Выполнение RPA задачи"""
     try:
         task = request.json
-        task_id = task.get('taskId')
+        task_id = task.get('task_id') or task.get('taskId')  # Поддержка обоих форматов
         
         logger.info(f"🎯 Получена RPA задача: {task_id}")
+        logger.info(f"📋 Данные задачи: {json.dumps(task, indent=2, ensure_ascii=False)}")
         
         # Валидация задачи
         if not task_id:
             return jsonify({
                 'success': False,
-                'error': 'Отсутствует taskId'
+                'error': 'Отсутствует task_id или taskId'
             }), 400
+        
+        # Преобразуем формат задачи для совместимости
+        normalized_task = {
+            'taskId': task_id,
+            'url': task.get('url'),
+            'actions': task.get('actions', []),
+            'metadata': {
+                'platform': task.get('platform', 'web'),
+                'account': task.get('account_data', {})
+            },
+            'multilogin_profile': task.get('multilogin_profile'),
+            'timeout': task.get('timeout', 60)
+        }
             
         # Запуск задачи
-        success = rpa_bot.execute_rpa_task(task)
+        success = rpa_bot.execute_rpa_task(normalized_task)
         
-        return jsonify({
+        # Формируем ответ с результатами
+        response_data = {
             'success': success,
-            'taskId': task_id,
-            'message': 'Задача выполнена' if success else 'Задача завершилась с ошибками'
-        })
+            'task_id': task_id,
+            'message': 'Задача выполнена успешно' if success else 'Задача завершилась с ошибками',
+            'execution_time': 0,  # TODO: добавить реальное время
+            'completed_actions': len(task.get('actions', [])) if success else 0
+        }
+        
+        # Добавляем скриншот если есть
+        if hasattr(rpa_bot, 'task_results') and rpa_bot.task_results:
+            if 'screenshot' in rpa_bot.task_results:
+                response_data['screenshot'] = rpa_bot.task_results['screenshot']
+                response_data['screenshots'] = [rpa_bot.task_results['screenshot']]
+            
+            # Очищаем результаты после использования
+            rpa_bot.task_results = {}
+        
+        logger.info(f"📤 Возвращаем результат: success={success}, screenshot={'есть' if 'screenshot' in response_data else 'нет'}")
+        
+        return jsonify(response_data)
         
     except Exception as e:
         logger.error(f"❌ Ошибка API /execute: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            'task_id': task.get('task_id') or task.get('taskId') if 'task' in locals() else None
         }), 500
 
 @app.route('/multilogin/status', methods=['GET'])
@@ -524,7 +591,7 @@ def multilogin_status():
         }), 500
 
 if __name__ == '__main__':
-    import random
+    import traceback
     
     logger.info("🚀 Запуск Enhanced RPA Bot с Multilogin")
     
