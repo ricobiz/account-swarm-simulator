@@ -22,7 +22,7 @@ WORKDIR /app
 COPY rpa-bot-cloud/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копируем код RPA бота
+# Копируем код RPA бота (Enhanced Multilogin v2.1)
 COPY rpa-bot-cloud/ .
 
 # Создаем директории

@@ -1,0 +1,12 @@
+RAILWAY FORCE UPDATE - 2025-07-12T15:45:00Z
+Version: Enhanced-Multilogin-v2.1-FIXED
+Trigger: force-update-multilogin-api
+
+CRITICAL FIXES:
+- Fixed Multilogin API connection in Railway deployment  
+- Enhanced token handling in rpa_bot_cloud.py
+- Added proper API endpoint configuration
+- Fixed screenshot and browser automation
+- Added comprehensive action support
+
+Expected result: Multilogin API should be accessible from Railway bot
