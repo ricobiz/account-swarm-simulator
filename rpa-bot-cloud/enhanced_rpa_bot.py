@@ -12,7 +12,7 @@ from flask import Flask, request, jsonify
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import TimeoutException, WebDriverException
@@ -163,6 +163,101 @@ class EnhancedRPABot:
         for char in text:
             element.send_keys(char)
             time.sleep(random.uniform(TYPING_SPEED_MIN, TYPING_SPEED_MAX))
+
+    def find_element_by_selector(self, selector, timeout=10):
+        """Поиск элемента по селектору"""
+        try:
+            return WebDriverWait(self.driver, timeout).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+            )
+        except TimeoutException:
+            logger.warning(f"⚠️ Элемент не найден: {selector}")
+            return None
+
+    def find_element_by_selectors(self, selectors, timeout=10):
+        """Поиск элемента по списку селекторов"""
+        for selector in selectors:
+            element = self.find_element_by_selector(selector, timeout)
+            if element:
+                return element
+        return None
+
+    def click_element_by_selectors(self, selectors, action_name="элемент"):
+        """Клик по элементу используя список селекторов"""
+        element = self.find_element_by_selectors(selectors)
+        if element:
+            return self.human_click(element)
+        else:
+            logger.warning(f"⚠️ Не найден элемент для: {action_name}")
+            return False
+
+    def human_click(self, element):
+        """Человекоподобный клик"""
+        try:
+            # Скролл к элементу
+            self.driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth'});", element)
+            time.sleep(random.uniform(0.5, 1.5))
+            
+            # Наведение мыши
+            ActionChains(self.driver).move_to_element(element).perform()
+            time.sleep(random.uniform(0.2, 0.8))
+            
+            # Клик
+            ActionChains(self.driver).click(element).perform()
+            self.human_like_action('click')
+            return True
+        except Exception as e:
+            logger.error(f"❌ Ошибка клика: {e}")
+            return False
+
+    def random_interaction(self):
+        """Случайное взаимодействие с контентом"""
+        try:
+            # Случайные действия во время прокрутки
+            actions = [
+                lambda: time.sleep(random.uniform(0.5, 2)),  # Пауза
+                lambda: self.driver.execute_script(f"window.scrollBy(0, {random.randint(-50, 50)});"),  # Мини-скролл
+                lambda: ActionChains(self.driver).move_by_offset(random.randint(-100, 100), random.randint(-100, 100)).perform()  # Движение мыши
+            ]
+            random.choice(actions)()
+        except:
+            pass
+
+    def random_human_behavior(self):
+        """Случайное человеческое поведение"""
+        try:
+            behaviors = [
+                # Пауза и размышление
+                lambda: time.sleep(random.uniform(2, 5)),
+                
+                # Случайная прокрутка
+                lambda: self.driver.execute_script(f"window.scrollBy(0, {random.randint(-200, 200)});"),
+                
+                # Движение мыши
+                lambda: ActionChains(self.driver).move_by_offset(
+                    random.randint(-300, 300), 
+                    random.randint(-300, 300)
+                ).perform(),
+                
+                # Нажатие случайной безопасной клавиши
+                lambda: ActionChains(self.driver).send_keys(" ").perform(),
+                
+                # Изменение размера окна (имитация пользователя)
+                lambda: self.driver.set_window_size(
+                    random.randint(1200, 1920),
+                    random.randint(800, 1080)
+                )
+            ]
+            
+            # Выполняем 1-3 случайных действия
+            for _ in range(random.randint(1, 3)):
+                random.choice(behaviors)()
+                time.sleep(random.uniform(0.5, 2))
+                
+            return True
+        except Exception as e:
+            logger.warning(f"⚠️ Ошибка случайного поведения: {e}")
+            return True
 
     def execute_telegram_like(self, post_url, emoji='👍'):
         """Постановка лайка в Telegram"""
@@ -330,6 +425,303 @@ class EnhancedRPABot:
                     logger.error(f"❌ Ошибка создания скриншота: {e}")
                     return False
                     
+            # =================== СОЦИАЛЬНЫЕ ДЕЙСТВИЯ ===================
+            elif action_type == 'like' or action_type == 'heart':
+                """Лайк/сердечко на любой платформе"""
+                logger.info("❤️ Ставим лайк")
+                selectors = action.get('selectors', [
+                    '[data-testid="like"]', '[aria-label*="like" i]', '[aria-label*="лайк" i]',
+                    '.like-button', '.heart-button', '[data-action="like"]',
+                    'button[title*="like" i]', '.btn-like', '[role="button"][aria-label*="like" i]'
+                ])
+                return self.click_element_by_selectors(selectors, "лайк")
+                
+            elif action_type == 'follow' or action_type == 'subscribe':
+                """Подписка на аккаунт/канал"""
+                logger.info("👥 Подписываемся")
+                selectors = action.get('selectors', [
+                    '[data-testid="follow"]', '[aria-label*="follow" i]', '[aria-label*="подпис" i]',
+                    '.follow-button', '.subscribe-button', '[data-action="follow"]',
+                    'button[title*="follow" i]', 'button[title*="subscribe" i]',
+                    '.btn-follow', '.btn-subscribe', '#subscribe-button'
+                ])
+                return self.click_element_by_selectors(selectors, "подписка")
+                
+            elif action_type == 'comment':
+                """Написание комментария"""
+                logger.info("💬 Пишем комментарий")
+                comment_text = action.get('text', 'Great post! 👍')
+                comment_selectors = action.get('comment_selectors', [
+                    '[data-testid="comment"]', '[placeholder*="comment" i]', '[placeholder*="коммент" i]',
+                    '.comment-input', 'textarea[placeholder*="write" i]', '[data-action="comment"]'
+                ])
+                
+                # Находим поле для комментария
+                comment_field = self.find_element_by_selectors(comment_selectors)
+                if comment_field:
+                    self.human_like_type(comment_field, comment_text)
+                    
+                    # Ищем кнопку отправки
+                    submit_selectors = [
+                        '[data-testid="reply"]', 'button[type="submit"]', '.submit-comment',
+                        'button[aria-label*="post" i]', 'button[title*="post" i]', '.btn-submit'
+                    ]
+                    return self.click_element_by_selectors(submit_selectors, "отправка комментария")
+                return False
+                
+            elif action_type == 'share':
+                """Поделиться постом"""
+                logger.info("📤 Делимся постом")
+                selectors = action.get('selectors', [
+                    '[data-testid="share"]', '[aria-label*="share" i]', '[aria-label*="поделиться" i]',
+                    '.share-button', '[data-action="share"]', 'button[title*="share" i]'
+                ])
+                return self.click_element_by_selectors(selectors, "поделиться")
+                
+            elif action_type == 'view_story':
+                """Просмотр истории"""
+                logger.info("👁️ Просматриваем истории")
+                selectors = action.get('selectors', [
+                    '[data-testid="story"]', '.story-ring', '.story-avatar', 
+                    '[aria-label*="story" i]', '.stories-container img'
+                ])
+                element = self.find_element_by_selectors(selectors)
+                if element:
+                    self.human_click(element)
+                    # Ждем загрузки истории
+                    time.sleep(random.uniform(3, 8))
+                    return True
+                return False
+                
+            elif action_type == 'watch_video':
+                """Просмотр видео"""
+                logger.info("🎥 Смотрим видео")
+                duration = action.get('duration', random.uniform(10, 30))
+                
+                # Найти и запустить видео
+                video_selectors = ['video', '.video-player', '[data-testid="video"]']
+                video = self.find_element_by_selectors(video_selectors)
+                if video:
+                    # Кликаем для начала воспроизведения
+                    self.human_click(video)
+                    
+                    # Имитируем просмотр
+                    watch_time = 0
+                    while watch_time < duration:
+                        pause_time = random.uniform(2, 5)
+                        time.sleep(pause_time)
+                        watch_time += pause_time
+                        
+                        # Случайные действия во время просмотра
+                        if random.random() < 0.1:  # 10% шанс прокрутки
+                            self.driver.execute_script(f"window.scrollBy(0, {random.randint(-100, 100)});")
+                    
+                    logger.info(f"✅ Видео просмотрено {duration:.1f} сек")
+                    return True
+                return False
+                
+            # =================== НАВИГАЦИЯ И ВЗАИМОДЕЙСТВИЕ ===================
+            elif action_type == 'hover':
+                """Наведение мыши на элемент"""
+                logger.info("🖱️ Наводим мышь")
+                selector = action.get('selector')
+                element = self.find_element_by_selector(selector)
+                if element:
+                    ActionChains(self.driver).move_to_element(element).perform()
+                    time.sleep(random.uniform(0.5, 2))
+                    return True
+                return False
+                
+            elif action_type == 'double_click':
+                """Двойной клик"""
+                logger.info("🖱️🖱️ Двойной клик")
+                selector = action.get('selector')
+                element = self.find_element_by_selector(selector)
+                if element:
+                    ActionChains(self.driver).double_click(element).perform()
+                    self.human_like_action('double_click')
+                    return True
+                return False
+                
+            elif action_type == 'right_click':
+                """Правый клик"""
+                logger.info("🖱️➡️ Правый клик")
+                selector = action.get('selector')
+                element = self.find_element_by_selector(selector)
+                if element:
+                    ActionChains(self.driver).context_click(element).perform()
+                    self.human_like_action('right_click')
+                    return True
+                return False
+                
+            elif action_type == 'drag_and_drop':
+                """Перетаскивание"""
+                logger.info("🤏 Перетаскиваем элемент")
+                source_selector = action.get('source_selector')
+                target_selector = action.get('target_selector')
+                
+                source = self.find_element_by_selector(source_selector)
+                target = self.find_element_by_selector(target_selector)
+                
+                if source and target:
+                    ActionChains(self.driver).drag_and_drop(source, target).perform()
+                    self.human_like_action('drag_drop')
+                    return True
+                return False
+                
+            elif action_type == 'scroll_to_element':
+                """Прокрутка к элементу"""
+                logger.info("🔄 Прокручиваем к элементу")
+                selector = action.get('selector')
+                element = self.find_element_by_selector(selector)
+                if element:
+                    self.driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth'});", element)
+                    time.sleep(random.uniform(1, 3))
+                    return True
+                return False
+                
+            elif action_type == 'infinite_scroll':
+                """Бесконечная прокрутка (лента)"""
+                logger.info("♾️ Бесконечная прокрутка ленты")
+                scroll_count = action.get('count', random.randint(3, 10))
+                
+                for i in range(scroll_count):
+                    # Прокрутка вниз
+                    scroll_height = random.randint(300, 800)
+                    self.driver.execute_script(f"window.scrollBy(0, {scroll_height});")
+                    
+                    # Случайная пауза
+                    pause_time = random.uniform(1, 4)
+                    time.sleep(pause_time)
+                    
+                    # Случайное взаимодействие с контентом
+                    if random.random() < 0.3:  # 30% шанс взаимодействия
+                        self.random_interaction()
+                
+                logger.info(f"✅ Выполнено {scroll_count} прокруток")
+                return True
+                
+            # =================== РАБОТА С ФОРМАМИ ===================
+            elif action_type == 'select_option':
+                """Выбор опции в dropdown"""
+                logger.info("📋 Выбираем опцию")
+                selector = action.get('selector')
+                option_value = action.get('value')
+                
+                select_element = Select(self.find_element_by_selector(selector))
+                if option_value:
+                    select_element.select_by_value(option_value)
+                    self.human_like_action('select')
+                    return True
+                return False
+                
+            elif action_type == 'upload_file':
+                """Загрузка файла"""
+                logger.info("📁 Загружаем файл")
+                selector = action.get('selector', 'input[type="file"]')
+                file_path = action.get('file_path')
+                
+                if file_path:
+                    element = self.find_element_by_selector(selector)
+                    if element:
+                        element.send_keys(file_path)
+                        time.sleep(random.uniform(2, 5))
+                        return True
+                return False
+                
+            elif action_type == 'clear_and_type':
+                """Очистка и ввод текста"""
+                logger.info("🧹 Очищаем и вводим текст")
+                selector = action.get('selector')
+                text = action.get('text', '')
+                
+                element = self.find_element_by_selector(selector)
+                if element:
+                    element.clear()
+                    time.sleep(random.uniform(0.3, 1))
+                    self.human_like_type(element, text)
+                    return True
+                return False
+                
+            # =================== СПЕЦИАЛЬНЫЕ ДЕЙСТВИЯ ===================
+            elif action_type == 'switch_tab':
+                """Переключение вкладки"""
+                logger.info("🔄 Переключаем вкладку")
+                tab_index = action.get('tab_index', -1)  # -1 = последняя вкладка
+                
+                tabs = self.driver.window_handles
+                if abs(tab_index) <= len(tabs):
+                    self.driver.switch_to.window(tabs[tab_index])
+                    time.sleep(random.uniform(1, 2))
+                    return True
+                return False
+                
+            elif action_type == 'new_tab':
+                """Открытие новой вкладки"""
+                logger.info("🆕 Открываем новую вкладку")
+                url = action.get('url', 'about:blank')
+                
+                self.driver.execute_script(f"window.open('{url}', '_blank');")
+                # Переключаемся на новую вкладку
+                self.driver.switch_to.window(self.driver.window_handles[-1])
+                time.sleep(random.uniform(2, 4))
+                return True
+                
+            elif action_type == 'close_tab':
+                """Закрытие вкладки"""
+                logger.info("❌ Закрываем вкладку")
+                self.driver.close()
+                
+                # Переключаемся на предыдущую вкладку если есть
+                if len(self.driver.window_handles) > 0:
+                    self.driver.switch_to.window(self.driver.window_handles[-1])
+                return True
+                
+            elif action_type == 'press_key':
+                """Нажатие клавиши"""
+                logger.info("⌨️ Нажимаем клавишу")
+                key = action.get('key', 'RETURN')
+                
+                from selenium.webdriver.common.keys import Keys
+                key_mapping = {
+                    'ENTER': Keys.RETURN,
+                    'ESCAPE': Keys.ESCAPE,
+                    'TAB': Keys.TAB,
+                    'SPACE': Keys.SPACE,
+                    'DELETE': Keys.DELETE,
+                    'BACKSPACE': Keys.BACKSPACE,
+                    'ARROW_UP': Keys.ARROW_UP,
+                    'ARROW_DOWN': Keys.ARROW_DOWN,
+                    'ARROW_LEFT': Keys.ARROW_LEFT,
+                    'ARROW_RIGHT': Keys.ARROW_RIGHT
+                }
+                
+                target = action.get('selector')
+                if target:
+                    element = self.find_element_by_selector(target)
+                    if element:
+                        element.send_keys(key_mapping.get(key, key))
+                else:
+                    ActionChains(self.driver).send_keys(key_mapping.get(key, key)).perform()
+                
+                self.human_like_action('key_press')
+                return True
+                
+            elif action_type == 'execute_js':
+                """Выполнение JavaScript"""
+                logger.info("🔧 Выполняем JavaScript")
+                script = action.get('script', '')
+                if script:
+                    result = self.driver.execute_script(script)
+                    logger.info(f"JS результат: {result}")
+                    return True
+                return False
+                
+            elif action_type == 'random_human_behavior':
+                """Случайное человеческое поведение"""
+                logger.info("🎭 Имитируем человеческое поведение")
+                return self.random_human_behavior()
+                
             return True
             
         except Exception as e:
