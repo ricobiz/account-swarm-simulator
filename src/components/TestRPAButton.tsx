@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRPAService } from '@/hooks/useRPAService';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { PlayCircle, Loader2, Heart } from 'lucide-react';
+import { PlayCircle, Loader2, Heart, TestTube, Settings } from 'lucide-react';
 import type { RPATask } from '@/types/rpa';
 
 export const TestRPAButton: React.FC = () => {
@@ -280,6 +280,74 @@ export const TestRPAButton: React.FC = () => {
           </Button>
 
           <Button
+            onClick={async () => {
+              setIsRunning(true);
+              setTestLog([]);
+              addLog('🔍 Запускаем прямую проверку RPA бота...');
+              
+              try {
+                const { data, error } = await supabase.functions.invoke('test-rpa-direct');
+                
+                if (error) {
+                  addLog(`❌ Ошибка вызова функции: ${error.message}`);
+                  toast({
+                    title: "Ошибка",
+                    description: `Не удалось вызвать функцию: ${error.message}`,
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                
+                addLog('📊 Результат прямой проверки:');
+                addLog(`🌐 RPA Endpoint: ${data.rpa_endpoint}`);
+                addLog(`💚 Health Check: ${data.health_check?.status || 'ERROR'}`);
+                addLog(`🧪 RPA Test Success: ${data.rpa_test?.success || false}`);
+                addLog(`🔗 Multilogin Connected: ${data.multilogin_status?.connected || false}`);
+                
+                if (data.rpa_test?.screenshot) {
+                  addLog('📸 Скриншот получен!');
+                } else {
+                  addLog('❌ Скриншот не получен');
+                }
+                
+                if (data.rpa_test?.error) {
+                  addLog(`❌ RPA Error: ${data.rpa_test.error}`);
+                }
+                
+                toast({
+                  title: data.success ? "Проверка завершена" : "Ошибка проверки",
+                  description: data.success ? "Проверка RPA бота выполнена" : "Произошла ошибка при проверке",
+                  variant: data.success ? "default" : "destructive",
+                });
+                
+              } catch (error: any) {
+                addLog(`❌ Критическая ошибка: ${error.message}`);
+                toast({
+                  title: "Критическая ошибка",
+                  description: `${error.message}`,
+                  variant: "destructive",
+                });
+              } finally {
+                setIsRunning(false);
+              }
+            }}
+            disabled={isRunning}
+            className="w-full bg-orange-600 hover:bg-orange-700"
+          >
+            {isRunning ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Проверяем...
+              </>
+            ) : (
+              <>
+                <Settings className="h-4 w-4 mr-2" />
+                Прямая проверка RPA бота
+              </>
+            )}
+          </Button>
+
+          <Button
             onClick={runBasicTest}
             disabled={isRunning}
             variant="outline"
@@ -292,7 +360,7 @@ export const TestRPAButton: React.FC = () => {
               </>
             ) : (
               <>
-                <PlayCircle className="h-4 w-4 mr-2" />
+                <TestTube className="h-4 w-4 mr-2" />
                 Базовый тест RPA
               </>
             )}
