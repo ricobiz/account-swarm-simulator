@@ -90,12 +90,13 @@ export default function TestFunctionality() {
   const testRPAWithToken = async () => {
     setLoading(prev => ({ ...prev, rpa: true }));
     try {
-      log('🤖 Тестирование RPA с токеном Multilogin...');
+      log('🤖 === НАЧИНАЕМ ТЕСТ RPA С ТОКЕНОМ MULTILOGIN ===');
       
       // Сначала проверяем что токен есть
+      log('🔍 Шаг 1: Проверяем наличие активного токена в базе данных...');
       const { data: tokenData } = await supabase
         .from('multilogin_tokens')
-        .select('token, expires_at')
+        .select('token, expires_at, email')
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -105,37 +106,94 @@ export default function TestFunctionality() {
         throw new Error('Токен недоступен или истек. Сначала получите/обновите токен.');
       }
 
-      log('✅ Токен найден, запускаем RPA задачу...');
+      log(`✅ Токен найден! Email: ${tokenData.email}`);
+      log(`📅 Токен действителен до: ${new Date(tokenData.expires_at).toLocaleString()}`);
+      log(`🔑 Токен (первые 50 символов): ${tokenData.token.substring(0, 50)}...`);
       
-      const taskId = `test_${Date.now()}`;
+      log('🚀 Шаг 2: Создаем тестовую RPA задачу...');
+      
+      const taskId = `test_multilogin_${Date.now()}`;
       const task = {
         taskId: taskId,
+        platform: 'test_multilogin',
         url: 'https://httpbin.org/get',
         actions: [
-          { type: 'navigate', url: 'https://httpbin.org/get' },
-          { type: 'wait', duration: 2000 },
-          { type: 'screenshot' }
+          { 
+            type: 'navigate', 
+            url: 'https://httpbin.org/get',
+            description: 'Переходим на тестовую страницу'
+          },
+          { 
+            type: 'wait', 
+            duration: 2000,
+            description: 'Ждем загрузки страницы (2 сек)'
+          },
+          { 
+            type: 'screenshot',
+            description: 'Делаем скриншот для проверки'
+          },
+          {
+            type: 'multilogin_test',
+            description: 'Тестируем интеграцию с Multilogin API',
+            token_required: true
+          }
         ],
         metadata: {
-          platform: 'test',
-          account: { username: 'test_user' }
+          platform: 'multilogin_test',
+          account: { 
+            username: 'test_user',
+            email: tokenData.email 
+          },
+          multilogin_token_info: {
+            email: tokenData.email,
+            expires_at: tokenData.expires_at
+          }
         },
-        timeout: 30
+        timeout: 30,
+        use_multilogin: true
       };
+      
+      log(`📋 Создана задача ID: ${taskId}`);
+      log('🔄 Шаг 3: Отправляем задачу RPA боту через Edge Function...');
       
       const { data, error } = await supabase.functions.invoke('rpa-task', {
         body: { task }
       });
 
       if (error) {
+        log(`❌ Ошибка Edge Function: ${error.message}`, 'error');
         throw new Error(error.message);
       }
 
-      log(`✅ RPA задача выполнена с токеном!`, 'success');
+      log('✅ Шаг 4: RPA задача принята!');
+      log(`📊 Ответ от RPA системы:`, 'success');
+      
+      if (data) {
+        if (data.taskId) log(`  • ID задачи: ${data.taskId}`);
+        if (data.status) log(`  • Статус: ${data.status}`);
+        if (data.message) log(`  • Сообщение: ${data.message}`);
+        if (data.multilogin_integration) {
+          log('🔗 Интеграция с Multilogin:');
+          log(`  • Токен использован: ${data.multilogin_integration.token_used ? 'Да' : 'Нет'}`);
+          log(`  • Email аккаунта: ${data.multilogin_integration.account_email || 'N/A'}`);
+        }
+      }
+
+      log('🎉 === ТЕСТ ЗАВЕРШЕН УСПЕШНО ===', 'success');
+      log('💡 Что произошло:', 'info');
+      log('  1. Проверили что токен Multilogin активен');
+      log('  2. Создали RPA задачу с использованием токена');
+      log('  3. Отправили задачу через Edge Function rpa-task');
+      log('  4. RPA бот получил задачу и токен для работы с Multilogin');
+      
       setRpaResult({
         success: true,
         message: 'RPA задача выполнена успешно с использованием токена Multilogin!',
-        data: data
+        data: {
+          taskId,
+          multilogin_token_email: tokenData.email,
+          rpa_response: data
+        }
       });
     } catch (error: any) {
       log(`❌ Ошибка RPA: ${error.message}`, 'error');
