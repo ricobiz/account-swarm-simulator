@@ -43,7 +43,7 @@ export const MultiloginTestButton: React.FC = () => {
       // Проверяем есть ли актуальный токен
       const { data: currentToken, error: getError } = await supabase.functions.invoke('multilogin-token-manager');
       
-      if (currentToken?.success) {
+      if (currentToken?.success && currentToken?.token) {
         setTokenStatus({
           hasToken: true,
           token: currentToken.token.substring(0, 50) + '...',
@@ -59,7 +59,7 @@ export const MultiloginTestButton: React.FC = () => {
           body: { action: 'refresh' }
         });
         
-        if (newToken?.success) {
+        if (newToken?.success && newToken?.token) {
           setTokenStatus({
             hasToken: true,
             token: newToken.token.substring(0, 50) + '...',
