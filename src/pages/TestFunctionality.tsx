@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { MultiloginTokenStatus } from '@/components/MultiloginTokenStatus';
 import { EdgeFunctionLogs } from '@/components/EdgeFunctionLogs';
 import { RPATaskMonitor } from '@/components/RPATaskMonitor';
+import { TestRPAButton } from '@/components/TestRPAButton';
 
 interface TestResult {
   success: boolean;
@@ -262,6 +263,11 @@ export default function TestFunctionality() {
 
       {/* Статус токенов */}
       <MultiloginTokenStatus />
+
+      <Separator />
+
+      {/* Прямая проверка RPA бота */}
+      <TestRPAButton />
 
       <Separator />
 
