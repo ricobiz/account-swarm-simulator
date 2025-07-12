@@ -20,9 +20,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Вызываем функцию обновления токенов
+    // Вызываем функцию автоматического обновления токенов через POST
     const { data, error } = await supabase.functions.invoke('multilogin-token-manager', {
-      body: { action: 'refresh' }
+      method: 'POST'
     })
 
     if (error) {

@@ -161,8 +161,8 @@ export const MultiloginTokenStatus: React.FC = () => {
 
         <div className="bg-purple-900/30 rounded-lg p-3 border border-purple-500/30">
           <p className="text-purple-200 text-sm">
-            💡 <strong>Новая система:</strong> Токены автоматически получаются и обновляются. 
-            Больше не нужно вручную добавлять MULTILOGIN_TOKEN!
+            🚀 <strong>Автоматическая система:</strong> Токены получаются через API каждые 25 минут используя ваш email/пароль Multilogin. 
+            Настроены MULTILOGIN_EMAIL и MULTILOGIN_PASSWORD.
           </p>
         </div>
       </CardContent>
