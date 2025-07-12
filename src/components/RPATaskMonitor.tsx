@@ -116,15 +116,17 @@ export const RPATaskMonitor: React.FC = () => {
 
   const clearAllTasks = async () => {
     try {
+      // Удаляем все задачи текущего пользователя
       const { error } = await supabase
         .from('rpa_tasks')
         .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // удаляем все задачи
+        .not('id', 'is', null); // удаляем все существующие записи
       
       if (error) throw error;
-      await fetchTasks(); // обновляем список
+      setTasks([]); // очищаем локальный state
+      console.log('✅ Все задачи очищены');
     } catch (error) {
-      console.error('Ошибка очистки задач:', error);
+      console.error('❌ Ошибка очистки задач:', error);
     }
   };
 
@@ -138,126 +140,122 @@ export const RPATaskMonitor: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <Card className="bg-gray-800 border-gray-700">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Eye className="h-5 w-5 text-blue-400" />
-              Монитор RPA задач
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Eye className="h-5 w-5" />
+            Монитор RPA задач
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={clearAllTasks}
+              variant="destructive"
+              size="sm"
+            >
+              🗑️ Очистить всё
+            </Button>
+            <Button
+              onClick={fetchTasks}
+              disabled={loading}
+              variant="outline"
+              size="sm"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Обновить
+            </Button>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ScrollArea className="h-96">
+          {tasks.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Eye className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Задачи не найдены</p>
             </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={clearAllTasks}
-                variant="destructive"
-                size="sm"
-                className="text-xs"
-              >
-                🗑️ Очистить всё
-              </Button>
-              <Button
-                onClick={fetchTasks}
-                disabled={loading}
-                variant="outline"
-                size="sm"
-                className="border-gray-600 text-white hover:bg-gray-700"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Обновить
-              </Button>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-96">
-            {tasks.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                <Eye className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Задачи не найдены</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {tasks.map((task) => {
-                  const multiloginInfo = getMultiloginInfo(task.task_data);
-                  return (
-                    <div
-                      key={task.id}
-                      className="bg-gray-900 rounded-lg p-4 border border-gray-700 cursor-pointer hover:border-gray-600"
-                      onClick={() => setSelectedTask(selectedTask?.id === task.id ? null : task)}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(task.status)}
-                          <span className="text-white text-sm font-medium">
-                            {getTaskDisplayName(task)}
-                          </span>
-                          <Badge className={getStatusColor(task.status)}>
-                            {task.status}
-                          </Badge>
-                          {multiloginInfo?.use_multilogin && (
-                            <Badge variant="outline" className="border-purple-500 text-purple-300">
-                              Multilogin
-                            </Badge>
-                          )}
-                        </div>
-                        <span className="text-gray-400 text-xs">
-                          {new Date(task.created_at).toLocaleString()}
+          ) : (
+            <div className="space-y-3">
+              {tasks.map((task) => {
+                const multiloginInfo = getMultiloginInfo(task.task_data);
+                return (
+                  <div
+                    key={task.id}
+                    className="border rounded-lg p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => setSelectedTask(selectedTask?.id === task.id ? null : task)}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(task.status)}
+                        <span className="font-medium text-sm">
+                          {getTaskDisplayName(task)}
                         </span>
+                        <Badge className={getStatusColor(task.status)}>
+                          {task.status}
+                        </Badge>
+                        {multiloginInfo?.use_multilogin && (
+                          <Badge variant="outline">
+                            Multilogin
+                          </Badge>
+                        )}
                       </div>
-                      
-                      {selectedTask?.id === task.id && (
-                        <div className="mt-4 space-y-3 border-t border-gray-700 pt-3">
+                      <span className="text-muted-foreground text-xs">
+                        {new Date(task.created_at).toLocaleString()}
+                      </span>
+                    </div>
+                    
+                    {selectedTask?.id === task.id && (
+                      <div className="mt-4 space-y-3 border-t pt-3">
+                        <div>
+                          <h4 className="font-medium mb-2">Действия задачи:</h4>
+                          <pre className="text-xs bg-muted p-2 rounded whitespace-pre-wrap">
+                            {formatTaskActions(task.task_data)}
+                          </pre>
+                        </div>
+                        
+                        {multiloginInfo && (
                           <div>
-                            <h4 className="text-white font-medium mb-2">Действия задачи:</h4>
-                            <pre className="text-xs text-gray-300 bg-gray-800 p-2 rounded whitespace-pre-wrap">
-                              {formatTaskActions(task.task_data)}
+                            <h4 className="font-medium mb-2">Multilogin интеграция:</h4>
+                            <div className="text-xs space-y-1">
+                              <div>Использован: {multiloginInfo.use_multilogin ? '✅ Да' : '❌ Нет'}</div>
+                              <div>Email: {multiloginInfo.email}</div>
+                              <div>Истекает: {new Date(multiloginInfo.expires_at).toLocaleString()}</div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Скриншот если есть */}
+                        {task.result_data?.screenshot && (
+                          <div>
+                            <h4 className="font-medium mb-2">📸 Скриншот результата:</h4>
+                            <div className="bg-muted p-2 rounded border">
+                              <img 
+                                src={task.result_data.screenshot} 
+                                alt="RPA Task Screenshot"
+                                className="max-w-full h-auto rounded border"
+                                style={{ maxHeight: '300px' }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {task.result_data && (
+                          <div>
+                            <h4 className="font-medium mb-2">Результат:</h4>
+                            <pre className="text-xs bg-muted p-2 rounded whitespace-pre-wrap max-h-40 overflow-y-auto">
+                              {JSON.stringify(task.result_data, null, 2)}
                             </pre>
                           </div>
-                          
-                          {multiloginInfo && (
-                            <div>
-                              <h4 className="text-white font-medium mb-2">Multilogin интеграция:</h4>
-                              <div className="text-xs text-gray-300 space-y-1">
-                                <div>Использован: {multiloginInfo.use_multilogin ? '✅ Да' : '❌ Нет'}</div>
-                                <div>Email: {multiloginInfo.email}</div>
-                                <div>Истекает: {new Date(multiloginInfo.expires_at).toLocaleString()}</div>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Скриншот если есть */}
-                          {task.result_data?.screenshot && (
-                            <div>
-                              <h4 className="text-white font-medium mb-2">📸 Скриншот результата:</h4>
-                              <div className="bg-gray-800 p-2 rounded border border-gray-600">
-                                <img 
-                                  src={task.result_data.screenshot} 
-                                  alt="RPA Task Screenshot"
-                                  className="max-w-full h-auto rounded border border-gray-600"
-                                  style={{ maxHeight: '300px' }}
-                                />
-                              </div>
-                            </div>
-                          )}
-
-                          {task.result_data && (
-                            <div>
-                              <h4 className="text-white font-medium mb-2">Результат:</h4>
-                              <pre className="text-xs text-gray-300 bg-gray-800 p-2 rounded whitespace-pre-wrap max-h-40 overflow-y-auto">
-                                {JSON.stringify(task.result_data, null, 2)}
-                              </pre>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </ScrollArea>
-        </CardContent>
-      </Card>
-    </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </ScrollArea>
+      </CardContent>
+    </Card>
   );
 };
