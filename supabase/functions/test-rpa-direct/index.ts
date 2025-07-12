@@ -12,6 +12,11 @@ serve(async (req) => {
   }
 
   try {
+    const currentTime = new Date().toISOString()
+    console.log(`🚀 === НАЧАЛО ПРЯМОЙ ПРОВЕРКИ RPA БОТА ===`)
+    console.log(`🕐 Время запуска: ${currentTime}`)
+    console.log(`📍 Timestamp: ${Date.now()}`)
+    
     const rpaEndpoint = Deno.env.get('RPA_BOT_ENDPOINT')
     
     if (!rpaEndpoint) {
@@ -49,7 +54,10 @@ serve(async (req) => {
     // 2. Тест простого RPA запроса
     let rpaTestResult = null;
     try {
-      console.log('🧪 Тестируем простой RPA запрос...')
+      const testTime = new Date().toISOString()
+      console.log(`🧪 === ТЕСТИРУЕМ RPA ЗАПРОС ===`)
+      console.log(`🕐 Время теста: ${testTime}`)
+      console.log(`🎯 URL для теста: https://www.google.com`)
       
       const testTask = {
         task_id: `direct_test_${Date.now()}`,
@@ -70,11 +78,17 @@ serve(async (req) => {
         }
       }
 
+      console.log(`📤 Отправляем задачу на RPA бот: ${rpaEndpoint}/execute`)
+      console.log(`🕐 Время отправки: ${new Date().toISOString()}`)
+
       const rpaResponse = await fetch(`${rpaEndpoint}/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(testTask)
       })
+
+      console.log(`📥 Получен ответ от RPA бота: ${rpaResponse.status}`)
+      console.log(`🕐 Время ответа: ${new Date().toISOString()}`)
 
       if (rpaResponse.ok) {
         rpaTestResult = await rpaResponse.json()
@@ -124,6 +138,7 @@ serve(async (req) => {
     const result = {
       success: true,
       timestamp: new Date().toISOString(),
+      test_completed_at: Date.now(),
       rpa_endpoint: rpaEndpoint,
       health_check: healthStatus,
       rpa_test: rpaTestResult,
@@ -133,6 +148,15 @@ serve(async (req) => {
         has_multilogin_token: !!Deno.env.get('MULTILOGIN_TOKEN')
       }
     }
+
+    console.log(`✅ === ПРОВЕРКА ЗАВЕРШЕНА ===`)
+    console.log(`🕐 Время завершения: ${new Date().toISOString()}`)
+    console.log(`📊 Результат проверки:`, {
+      health_ok: !healthStatus?.error,
+      rpa_test_ok: rpaTestResult?.success,
+      multilogin_ok: !multiloginStatus?.error,
+      screenshot_received: !!rpaTestResult?.screenshot
+    })
 
     return new Response(
       JSON.stringify(result, null, 2),
