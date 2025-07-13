@@ -284,6 +284,8 @@ export const TestRPAButton: React.FC = () => {
             onClick={async () => {
               setIsRunning(true);
               setTestLog([]);
+              setScreenshotData(null); // Сбрасываем предыдущий скриншот
+              
               addLog('🔍 Запускаем прямую проверку RPA бота...');
               
               try {
@@ -298,7 +300,6 @@ export const TestRPAButton: React.FC = () => {
                   });
                   return;
                 }
-                
                 
                 addLog('📊 Результат прямой проверки:');
                 addLog(`🌐 RPA Endpoint: ${data.rpa_endpoint}`);
@@ -315,20 +316,27 @@ export const TestRPAButton: React.FC = () => {
                 }
                 
                 // Детальная отладка RPA теста
-                addLog(`🔍 Все данные RPA теста: ${JSON.stringify(Object.keys(data.rpa_test || {}))}`);
                 if (data.rpa_test) {
-                  addLog(`📋 RPA Test Details: success=${data.rpa_test.success}, task_id=${data.rpa_test.task_id}`);
+                  addLog(`📋 RPA Test: success=${data.rpa_test.success}, taskId=${data.rpa_test.taskId || data.rpa_test.task_id || 'undefined'}`);
+                  
+                  if (data.rpa_test.result) {
+                    addLog(`🔧 Browser Type: ${data.rpa_test.result.browser_type || 'unknown'}`);
+                    if (data.rpa_test.result.results) {
+                      addLog(`✅ Выполненные действия: ${data.rpa_test.result.results.length}`);
+                      data.rpa_test.result.results.forEach((result: string, index: number) => {
+                        addLog(`  ${index + 1}. ${result}`);
+                      });
+                    }
+                  }
                 }
                 
-                if (data.rpa_test?.screenshot) {
+                // Проверка скриншота
+                if (data.rpa_test?.result?.screenshot) {
                   addLog('📸 Скриншот получен!');
-                  addLog(`📏 Размер скриншота: ${data.rpa_test.screenshot.length} символов`);
-                  addLog(`🎨 Начало скриншота: ${data.rpa_test.screenshot.substring(0, 100)}...`);
-                  // Сохраняем скриншот для отображения
-                  setScreenshotData(data.rpa_test.screenshot);
+                  addLog(`📏 Размер скриншота: ${data.rpa_test.result.screenshot.length} символов`);
+                  setScreenshotData(data.rpa_test.result.screenshot);
                 } else {
                   addLog('❌ Скриншот не получен');
-                  addLog(`🔍 Содержимое rpa_test: ${JSON.stringify(data.rpa_test, null, 2).substring(0, 500)}...`);
                   setScreenshotData(null);
                 }
                 
