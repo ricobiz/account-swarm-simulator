@@ -306,6 +306,16 @@ class AdvancedCloudRPABot:
             screenshot_path = f"screenshots/final_{task_id}_{int(time.time())}.png"
             self.antidetect_browser.take_screenshot(screenshot_path)
             
+            # Конвертируем скриншот в base64
+            screenshot_base64 = None
+            try:
+                import base64
+                with open(screenshot_path, "rb") as screenshot_file:
+                    screenshot_base64 = base64.b64encode(screenshot_file.read()).decode('utf-8')
+                logger.info(f"Скриншот конвертирован в base64: {len(screenshot_base64)} символов")
+            except Exception as e:
+                logger.error(f"Ошибка конвертации скриншота в base64: {e}")
+            
             # Получение статистики кэша
             cache_stats = self.vision_cache.get_cache_stats()
             
@@ -316,7 +326,7 @@ class AdvancedCloudRPABot:
                 'message': f'Продвинутая задача выполнена. Завершено {completed_actions}/{len(actions)} действий',
                 'executionTime': execution_time,
                 'completedActions': completed_actions,
-                'screenshot': screenshot_path,
+                'screenshot': screenshot_base64,
                 'data': {
                     'url': self.antidetect_browser.driver.current_url,
                     'title': self.antidetect_browser.driver.title
@@ -338,11 +348,16 @@ class AdvancedCloudRPABot:
             execution_time = int((time.time() - start_time) * 1000)
             
             # Скриншот ошибки
-            error_screenshot = f"cache_errors/task_error_{task_id}_{int(time.time())}.png"
+            error_screenshot_path = f"cache_errors/task_error_{task_id}_{int(time.time())}.png"
+            error_screenshot_base64 = None
             try:
-                self.antidetect_browser.take_screenshot(error_screenshot)
-            except:
-                error_screenshot = None
+                self.antidetect_browser.take_screenshot(error_screenshot_path)
+                # Конвертируем в base64
+                import base64
+                with open(error_screenshot_path, "rb") as error_file:
+                    error_screenshot_base64 = base64.b64encode(error_file.read()).decode('utf-8')
+            except Exception as screenshot_error:
+                logger.warning(f"Не удалось создать скриншот ошибки: {screenshot_error}")
             
             # Результат с ошибкой
             result = {
@@ -352,7 +367,7 @@ class AdvancedCloudRPABot:
                 'error': str(e),
                 'executionTime': execution_time,
                 'completedActions': completed_actions,
-                'screenshot': error_screenshot,
+                'screenshot': error_screenshot_base64,
                 'stats': {
                     'session': self.current_session_stats,
                     'cache': self.vision_cache.get_cache_stats()
