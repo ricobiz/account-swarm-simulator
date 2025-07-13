@@ -423,7 +423,7 @@ export const TestRPAButton: React.FC = () => {
           <div className="mt-4 p-3 bg-gray-800 rounded-lg">
             <h4 className="text-sm font-medium text-green-400 mb-2">📸 Скриншот Google:</h4>
             <img 
-              src={screenshotData} 
+              src={`data:image/png;base64,${screenshotData}`} 
               alt="RPA Screenshot Google" 
               className="max-w-full h-auto border border-gray-600 rounded shadow-lg"
               style={{ maxHeight: '400px' }}
