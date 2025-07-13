@@ -15,8 +15,10 @@ export const TestRPAButton: React.FC = () => {
   const { toast } = useToast();
 
   const addLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const logMessage = `${timestamp}: ${message}`;
     console.log(`[RPA TEST] ${message}`);
-    setTestLog(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+    setTestLog(prev => [...prev, logMessage]);
   };
 
   const runTelegramLikeTest = async () => {
