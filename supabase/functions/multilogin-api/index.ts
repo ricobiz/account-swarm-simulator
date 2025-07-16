@@ -10,7 +10,7 @@ const corsHeaders = {
 class RealMultiloginAPI {
   constructor(token: string) {
     this.token = token
-    this.baseURL = 'https://api.multilogin.com'
+    this.baseURL = 'https://api.multiloginapp.com'
   }
 
   private token: string
