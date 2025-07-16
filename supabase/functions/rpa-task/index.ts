@@ -25,7 +25,13 @@ async function executeRPATask(task: any, multiloginProfile?: string): Promise<an
       },
       body: JSON.stringify({
         task_id: task.taskId,
-        actions: task.actions || [],
+        actions: [
+          ...(task.actions || []),
+          {
+            type: 'screenshot',
+            description: 'Создание скриншота страницы'
+          }
+        ],
         url: task.url || '',
         account_data: task.metadata?.account || {},
         multilogin_profile: multiloginProfile,
@@ -133,6 +139,7 @@ serve(async (req) => {
         try {
           const createProfileResponse = await supabase.functions.invoke('multilogin-api', {
             body: {
+              action: 'create_profile',
               platform: task.metadata?.platform || 'instagram',
               username: task.metadata?.account?.username || 'test_user',
               password: task.metadata?.account?.password || 'test_pass'
