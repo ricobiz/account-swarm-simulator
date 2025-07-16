@@ -6,6 +6,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Функция для извлечения скриншота из результатов действий
+function extractScreenshotFromResults(results: any[]): string | null {
+  if (!results || !Array.isArray(results)) return null
+  
+  // Ищем результат действия screenshot
+  const screenshotResult = results.find(result => 
+    result.success && result.screenshot
+  )
+  
+  return screenshotResult?.screenshot || null
+}
+
 // Реальное выполнение RPA задач через Railway RPA Bot
 async function executeRPATask(task: any, multiloginProfile?: string): Promise<any> {
   console.log('🎯 Выполнение реальной RPA задачи:', task.taskId)
@@ -63,7 +75,7 @@ async function executeRPATask(task: any, multiloginProfile?: string): Promise<an
       message: result.message || 'Задача выполнена',
       executionTime: result.execution_time || 0,
       completedActions: result.completed_actions || 0,
-      screenshot: result.screenshot || null,
+      screenshot: result.screenshot || extractScreenshotFromResults(result.results),
       data: {
         platform: task.metadata?.platform || 'unknown',
         account: task.metadata?.account?.username || 'unknown',
@@ -71,7 +83,8 @@ async function executeRPATask(task: any, multiloginProfile?: string): Promise<an
         multilogin_integrated: !!multiloginProfile,
         screenshot_urls: result.screenshots || [],
         browser_fingerprint: result.browser_info || {},
-        execution_details: result.logs || []
+        execution_details: result.logs || [],
+        action_results: result.results || []
       }
     }
     

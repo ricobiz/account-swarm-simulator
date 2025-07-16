@@ -279,10 +279,24 @@ class MultiloginRPABot:
 
     def action_screenshot(self, action):
         """Создание скриншота"""
+        import base64
         filename = f"/tmp/screenshot_{int(time.time())}.png"
         self.driver.save_screenshot(filename)
-        logger.info(f"📸 Скриншот сохранен: {filename}")
-        return {\'success\': True, \'filename\': filename}
+        
+        # Читаем файл и кодируем в base64
+        try:
+            with open(filename, 'rb') as f:
+                screenshot_data = base64.b64encode(f.read()).decode('utf-8')
+            logger.info(f"📸 Скриншот создан и закодирован в base64: {len(screenshot_data)} символов")
+            return {
+                'success': True, 
+                'filename': filename,
+                'screenshot': screenshot_data,
+                'screenshot_size': len(screenshot_data)
+            }
+        except Exception as e:
+            logger.error(f"❌ Ошибка чтения скриншота: {e}")
+            return {'success': False, 'error': str(e)}
 
 # Глобальный экземпляр бота
 bot = MultiloginRPABot()
