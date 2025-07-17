@@ -99,12 +99,14 @@ serve(async (req) => {
           { type: 'screenshot', description: 'Делаем скриншот Google для теста' }
         ],
         timeout: 30,
+        use_multilogin: !!multiloginToken, // Добавляем флаг использования Multilogin
         metadata: {
           platform: 'test_google',
           account: { username: 'test_user' },
           multilogin_token_info: multiloginToken ? {
             token: multiloginToken,
-            email: tokenData?.email || 'unknown'
+            email: tokenData?.email || 'unknown',
+            expires_at: tokenData?.expires_at || null
           } : null
         },
         multilogin_token: multiloginToken // Добавляем токен прямо в задачу
@@ -152,26 +154,41 @@ serve(async (req) => {
         // Обрезаем скриншот для логов (слишком длинный)
         if (rpaTestResult.screenshot) {
           console.log(`📸 Скриншот получен: ${rpaTestResult.screenshot.substring(0, 100)}...`)
+        } else {
+          console.log('⚠️ Скриншот отсутствует в ответе RPA бота')
         }
 
         // Обновляем задачу в базе данных с результатом
         if (savedTask) {
           console.log('💾 Обновляем результат задачи в базе...')
+          const updateData = {
+            status: rpaTestResult.success ? 'completed' : 'failed',
+            result_data: {
+              success: rpaTestResult.success,
+              screenshot: rpaTestResult.screenshot || null, // Используем скриншот из RPA бота
+              message: rpaTestResult.message || 'Тест выполнен',
+              executionTime: rpaTestResult.execution_time || 0,
+              completedActions: rpaTestResult.completed_actions || 0,
+              data: {
+                platform: 'test_google',
+                account: 'test_user',
+                screenshot_received: !!rpaTestResult.screenshot,
+                browser_type: rpaTestResult.browser_type || 'unknown',
+                multilogin_profile: rpaTestResult.profile_id || null,
+                action_results: rpaTestResult.results || []
+              }
+            }
+          }
+
+          console.log('📊 Сохраняем данные результата:', {
+            screenshot_present: !!rpaTestResult.screenshot,
+            screenshot_length: rpaTestResult.screenshot ? rpaTestResult.screenshot.length : 0,
+            success: rpaTestResult.success
+          })
+
           const { error: updateError } = await supabase
             .from('rpa_tasks')
-            .update({
-              status: rpaTestResult.success ? 'completed' : 'failed',
-              result_data: {
-                success: rpaTestResult.success,
-                screenshot: rpaTestResult.screenshot,
-                message: rpaTestResult.message || 'Тест выполнен',
-                data: {
-                  platform: 'test_google',
-                  account: 'test_user',
-                  screenshot_received: !!rpaTestResult.screenshot
-                }
-              }
-            })
+            .update(updateData)
             .eq('id', savedTask.id)
 
           if (updateError) {

@@ -216,11 +216,15 @@ export const RPATaskMonitor: React.FC = () => {
                         {multiloginInfo && (
                           <div>
                             <h4 className="font-medium mb-2">Multilogin интеграция:</h4>
-                            <div className="text-xs space-y-1">
-                              <div>Использован: {multiloginInfo.use_multilogin ? '✅ Да' : '❌ Нет'}</div>
-                              <div>Email: {multiloginInfo.email}</div>
-                              <div>Истекает: {new Date(multiloginInfo.expires_at).toLocaleString()}</div>
-                            </div>
+                             <div className="text-xs space-y-1">
+                               <div>Использован: {multiloginInfo.use_multilogin ? '✅ Да' : '❌ Нет'}</div>
+                               <div>Email: {multiloginInfo.email}</div>
+                               <div>Истекает: {
+                                 multiloginInfo.expires_at && multiloginInfo.expires_at !== 'N/A' 
+                                   ? new Date(multiloginInfo.expires_at).toLocaleString() 
+                                   : 'Нет данных'
+                               }</div>
+                             </div>
                           </div>
                         )}
                         
