@@ -113,6 +113,25 @@ serve(async (req) => {
       console.log(`📤 Отправляем задачу на RPA бот: ${rpaEndpoint}/execute`)
       console.log(`🕐 Время отправки: ${new Date().toISOString()}`)
 
+      // Сохраняем задачу в базу данных для отображения в мониторе
+      console.log('💾 Сохраняем задачу в базу данных...')
+      const { data: savedTask, error: saveError } = await supabase
+        .from('rpa_tasks')
+        .insert({
+          task_id: testTask.taskId,
+          task_data: testTask,
+          status: 'processing',
+          user_id: null // тестовая задача
+        })
+        .select()
+        .single()
+
+      if (saveError) {
+        console.log('⚠️ Ошибка сохранения задачи:', saveError.message)
+      } else {
+        console.log('✅ Задача сохранена в базу:', savedTask.id)
+      }
+
       const rpaResponse = await fetch(`${rpaEndpoint}/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -134,12 +153,55 @@ serve(async (req) => {
         if (rpaTestResult.screenshot) {
           console.log(`📸 Скриншот получен: ${rpaTestResult.screenshot.substring(0, 100)}...`)
         }
+
+        // Обновляем задачу в базе данных с результатом
+        if (savedTask) {
+          console.log('💾 Обновляем результат задачи в базе...')
+          const { error: updateError } = await supabase
+            .from('rpa_tasks')
+            .update({
+              status: rpaTestResult.success ? 'completed' : 'failed',
+              result_data: {
+                success: rpaTestResult.success,
+                screenshot: rpaTestResult.screenshot,
+                message: rpaTestResult.message || 'Тест выполнен',
+                data: {
+                  platform: 'test_google',
+                  account: 'test_user',
+                  screenshot_received: !!rpaTestResult.screenshot
+                }
+              }
+            })
+            .eq('id', savedTask.id)
+
+          if (updateError) {
+            console.log('⚠️ Ошибка обновления задачи:', updateError.message)
+          } else {
+            console.log('✅ Результат задачи сохранен в базу')
+          }
+        }
       } else {
         const errorText = await rpaResponse.text()
         console.log('❌ RPA тест failed:', rpaResponse.status, errorText)
         rpaTestResult = { 
           error: `HTTP ${rpaResponse.status}`, 
           details: errorText 
+        }
+
+        // Обновляем задачу как failed
+        if (savedTask) {
+          console.log('💾 Отмечаем задачу как failed...')
+          await supabase
+            .from('rpa_tasks')
+            .update({
+              status: 'failed',
+              result_data: {
+                success: false,
+                error: rpaTestResult.error,
+                message: 'Ошибка выполнения теста'
+              }
+            })
+            .eq('id', savedTask.id)
         }
       }
     } catch (error) {

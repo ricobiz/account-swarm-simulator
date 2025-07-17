@@ -161,7 +161,7 @@ class MultiloginRPABot:
     def execute_task(self, task_data):
         """Выполнение RPA задачи"""
         try:
-            task_id = task_data.get(\'id\')
+            task_id = task_data.get(\'taskId\') or task_data.get(\'id\')  # Поддерживаем оба формата
             account_data = task_data.get(\'account\', {})
             actions = task_data.get(\'actions\', [])
             
@@ -190,18 +190,28 @@ class MultiloginRPABot:
             success_count = sum(1 for r in results if r.get(\'success\', False))
             logger.info(f"✅ Задача {task_id} завершена: {success_count}/{len(actions)} действий успешно")
             
+            # Извлекаем скриншот из результатов действий
+            screenshot = None
+            for result in results:
+                if result.get(\'success\') and result.get(\'screenshot\'):
+                    screenshot = result.get(\'screenshot\')
+                    logger.info(f"📸 Найден скриншот в результатах: {len(screenshot)} символов")
+                    break
+            
             return {
                 \'task_id\': task_id,
                 \'success\': success_count > 0,
                 \'results\': results,
                 \'profile_id\': self.current_profile_id,
-                \'account\': account_data.get(\'username\')
+                \'account\': account_data.get(\'username\'),
+                \'screenshot\': screenshot,
+                \'message\': f\'Задача {task_id} выполнена успешно: {success_count}/{len(actions)} действий\'
             }
             
         except Exception as e:
             logger.error(f"❌ Ошибка выполнения задачи: {e}")
             return {
-                \'task_id\': task_data.get(\'id\'),
+                \'task_id\': task_data.get(\'taskId\') or task_data.get(\'id\'),
                 \'success\': False,
                 \'error\': str(e)
             }
