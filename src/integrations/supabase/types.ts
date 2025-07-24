@@ -304,6 +304,39 @@ export type Database = {
         }
         Relationships: []
       }
+      security_events: {
+        Row: {
+          event_data: Json
+          event_type: string
+          id: string
+          ip_address: unknown | null
+          severity: string
+          timestamp: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          event_data?: Json
+          event_type: string
+          id?: string
+          ip_address?: unknown | null
+          severity?: string
+          timestamp?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          event_data?: Json
+          event_type?: string
+          id?: string
+          ip_address?: unknown | null
+          severity?: string
+          timestamp?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -317,6 +350,10 @@ export type Database = {
           details?: Json
         }
         Returns: undefined
+      }
+      can_modify_user_role: {
+        Args: { target_user_id: string; new_role: string }
+        Returns: boolean
       }
       get_current_user_id: {
         Args: Record<PropertyKey, never>
