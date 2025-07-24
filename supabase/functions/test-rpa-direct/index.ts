@@ -115,6 +115,23 @@ serve(async (req) => {
       console.log(`📤 Отправляем задачу на RPA бот: ${rpaEndpoint}/execute`)
       console.log(`🕐 Время отправки: ${new Date().toISOString()}`)
 
+      // Get current user from JWT token for proper authorization
+      const authHeader = req.headers.get('authorization')
+      let currentUserId = null
+      
+      if (authHeader) {
+        try {
+          const jwt = authHeader.replace('Bearer ', '')
+          const { data: { user }, error } = await supabase.auth.getUser(jwt)
+          if (!error && user) {
+            currentUserId = user.id
+            console.log('✅ Пользователь авторизован:', user.email)
+          }
+        } catch (error) {
+          console.log('⚠️ Ошибка проверки JWT:', error.message)
+        }
+      }
+
       // Сохраняем задачу в базу данных для отображения в мониторе
       console.log('💾 Сохраняем задачу в базу данных...')
       const { data: savedTask, error: saveError } = await supabase
@@ -123,7 +140,7 @@ serve(async (req) => {
           task_id: testTask.taskId,
           task_data: testTask,
           status: 'processing',
-          user_id: null // тестовая задача
+          user_id: currentUserId // Associate with authenticated user
         })
         .select()
         .single()

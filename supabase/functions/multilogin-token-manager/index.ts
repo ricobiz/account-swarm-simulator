@@ -7,19 +7,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// MD5 hash function implementation using Deno std crypto
-async function md5Hash(text: string): Promise<string> {
+// Secure SHA-256 hash function implementation using Deno std crypto
+async function secureHash(text: string): Promise<string> {
   try {
     const encoder = new TextEncoder();
     const data = encoder.encode(text);
-    const hashBuffer = await crypto.subtle.digest("MD5", data);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    console.log('✅ MD5 хэш создан успешно');
+    console.log('✅ SHA-256 хэш создан успешно');
     return hashHex;
   } catch (error) {
-    console.warn('⚠️ MD5 недоступен, пробуем без хэширования:', error.message);
-    // Fallback - return password as is
+    console.warn('⚠️ SHA-256 недоступен, пробуем без хэширования:', error.message);
+    // Fallback - return password as is (NOT RECOMMENDED for production)
     return text;
   }
 }
@@ -29,9 +29,9 @@ async function getMultiloginToken(email: string, password: string): Promise<stri
   console.log('🔑 Получаем токен через Multilogin API...');
   console.log('📧 Email:', email);
   
-  // Hash password using MD5
-  const hashedPassword = await md5Hash(password);
-  console.log('🔐 Пароль хэширован');
+  // Hash password using SHA-256 (more secure than MD5)
+  const hashedPassword = await secureHash(password);
+  console.log('🔐 Пароль безопасно хэширован');
   
   const requestBody = JSON.stringify({
     email: email,

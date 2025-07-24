@@ -51,31 +51,34 @@ export const useAdminUsers = () => {
 
   const updateUserRole = async (userId: string, newRole: 'admin' | 'premium' | 'basic') => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ 
-          role: newRole,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId)
-        .select()
-        .single();
+      // Use secure edge function for admin operations
+      const { data: result, error } = await supabase.functions.invoke('secure-admin-actions', {
+        body: {
+          action: 'UPDATE_ROLE',
+          targetUserId: userId,
+          newRole: newRole
+        }
+      });
 
       if (error) throw error;
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update role');
+      }
       
-      setUsers(prev => prev.map(u => u.id === userId ? data : u));
+      setUsers(prev => prev.map(u => u.id === userId ? result.data : u));
       
       toast({
         title: "Успешно",
         description: `Роль пользователя изменена на ${newRole}`
       });
       
-      return { data, error: null };
-    } catch (error) {
+      return { data: result.data, error: null };
+    } catch (error: any) {
       console.error('Error updating user role:', error);
       toast({
         title: "Ошибка",
-        description: "Не удалось изменить роль пользователя",
+        description: error.message || "Не удалось изменить роль пользователя",
         variant: "destructive"
       });
       return { data: null, error };
@@ -84,32 +87,35 @@ export const useAdminUsers = () => {
 
   const updateUserLimits = async (userId: string, accountsLimit: number, scenariosLimit: number) => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ 
-          accounts_limit: accountsLimit,
-          scenarios_limit: scenariosLimit,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId)
-        .select()
-        .single();
+      // Use secure edge function for admin operations
+      const { data: result, error } = await supabase.functions.invoke('secure-admin-actions', {
+        body: {
+          action: 'UPDATE_LIMITS',
+          targetUserId: userId,
+          accountsLimit,
+          scenariosLimit
+        }
+      });
 
       if (error) throw error;
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update limits');
+      }
       
-      setUsers(prev => prev.map(u => u.id === userId ? data : u));
+      setUsers(prev => prev.map(u => u.id === userId ? result.data : u));
       
       toast({
         title: "Успешно",
         description: "Лимиты пользователя обновлены"
       });
       
-      return { data, error: null };
-    } catch (error) {
+      return { data: result.data, error: null };
+    } catch (error: any) {
       console.error('Error updating user limits:', error);
       toast({
         title: "Ошибка",
-        description: "Не удалось обновить лимиты пользователя",
+        description: error.message || "Не удалось обновить лимиты пользователя",
         variant: "destructive"
       });
       return { data: null, error };

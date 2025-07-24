@@ -1,13 +1,16 @@
 project_id = "izmgzstdgoswlozinmyk"
 
 [functions.test-multilogin-auth]
-verify_jwt = false
+verify_jwt = true
 
 [functions.check-multilogin-secrets]
-verify_jwt = false
+verify_jwt = true
 
 [functions.multilogin-profiles]
-verify_jwt = false
+verify_jwt = true
 
 [functions.multilogin-token-manager]
+verify_jwt = true
+
+[functions.secure-admin-actions]
 verify_jwt = false
